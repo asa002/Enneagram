@@ -576,7 +576,7 @@ function chartB(r){
 function barsB(keys, getP, getL, top){
   const row = 56;
   return { h: () => keys.length * row + 10, draw(ctx, y){
-    keys.forEach((k, i) => { const yy = y + i * row, m = k === top, bx = M + 330, bw = CW - 330 - 96;
+    keys.forEach((k, i) => { const yy = y + i * row, m = k === top, bx = M + 330, bw = CW - 330 - 120;
       tx(ctx, getL(k), M, yy + 40, f(28, m ? 700 : 400), C.ink);
       ctx.fillStyle = C.soft; rr(ctx, bx, yy + 18, bw, 24, 12); ctx.fill();
       ctx.fillStyle = m ? C.ink : C.bar; rr(ctx, bx, yy + 18, Math.max(24, bw * getP(k) / 100), 24, 12); ctx.fill();
