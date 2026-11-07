@@ -55,7 +55,7 @@ ul.tips li{margin-bottom:4px}
 .sec-tag{display:inline-block;font-size:12px;color:var(--sub);border:1px solid var(--line);border-radius:999px;padding:2px 10px;margin-bottom:12px}
 /* result */
 .hero{background:var(--ink);color:var(--bg);border-radius:22px;padding:22px 22px;display:flex;gap:18px;align-items:center;margin-top:16px}
-.hero .n{font-family:var(--num);font-size:110px;line-height:.9;font-weight:600}
+.hero .n{font-size:96px;line-height:1;font-weight:500;min-width:.62em;text-align:center}
 .hero .lab{font-size:13px;opacity:.75}
 .hero .name{font-size:24px;font-weight:700;margin:2px 0 6px}
 .hero .wing{font-size:15px}
@@ -67,7 +67,7 @@ ul.tips li{margin-bottom:4px}
 .cell .s{font-size:12px;color:var(--sub);line-height:1.5}
 .chart{display:block;margin:12px auto 0;width:100%;max-width:420px}
 .bars{display:flex;flex-direction:column;gap:9px}
-.bar{display:grid;grid-template-columns:148px 1fr 36px;align-items:center;gap:10px;font-size:14px}
+.bar{display:grid;grid-template-columns:140px 1fr 46px;align-items:center;gap:10px;font-size:14px}
 .bar .track{height:12px;background:var(--soft);border-radius:6px;overflow:hidden}
 .bar .fill{height:100%;background:#BFAE8E;border-radius:6px}
 .bar.top .fill{background:var(--ink)}
@@ -77,6 +77,7 @@ ul.tips li{margin-bottom:4px}
 .export{margin:6px 0 4px}
 .export .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .export .row .btn+.btn{margin-top:0}
+.btn.discord{margin-top:10px;background:#5865F2;border-color:#5865F2;color:#fff}
 .small-links{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;margin-top:6px}
 /* overlay & dialog */
 .ov{position:fixed;inset:0;background:rgba(29,28,26,.78);z-index:50;display:flex;flex-direction:column;align-items:center;overflow:auto;padding:18px 14px 40px}
@@ -97,7 +98,7 @@ ul.tips li{margin-bottom:4px}
 <section id="start">
   <div class="kicker">ENNEAGRAM SELF CHECK</div>
   <h1>エニアグラム詳細診断</h1>
-  <p class="muted">全108問・目安10〜15分。途中で閉じても、この端末なら続きから再開できます。</p>
+  <p class="muted">全33問・目安5分。各タイプの「根っこの動機・恐れ・反応パターン」だけを聞く短縮版です。途中で閉じても、この端末なら続きから再開できます。</p>
 
   <div class="card" style="margin-top:18px">
     <ul class="tips">
@@ -128,7 +129,7 @@ ul.tips li{margin-bottom:4px}
 <section id="quiz" hidden>
   <div class="qtop">
     <button class="ghost" id="qBack">← 前へ</button>
-    <span id="qCount">1 / 108</span>
+    <span id="qCount">1 / 33</span>
     <button class="ghost" id="qHome">中断</button>
   </div>
   <div class="progress"><div id="qBar"></div></div>
@@ -146,7 +147,9 @@ ul.tips li{margin-bottom:4px}
       <button class="btn primary" id="btnImg" disabled>画像で保存</button>
       <button class="btn" id="btnPdf" disabled>PDFで保存</button>
     </div>
+    <button class="btn discord" id="btnDiscord" disabled>Discordに送る</button>
     <div class="small-links">
+      <button class="ghost" id="btnDiscordSet">Discord設定</button>
       <button class="ghost" id="btnPreview" disabled>画像を表示（長押しで保存）</button>
       <button class="ghost" id="btnCopy">テキストでコピー</button>
       <button class="ghost" id="btnTop">トップへ</button>
@@ -175,6 +178,21 @@ ul.tips li{margin-bottom:4px}
       <button class="btn" id="dlgNo">やめる</button>
       <button class="btn primary" id="dlgYes">OK</button>
     </div>
+  </div>
+</div>
+<div class="dlg" id="dsDlg" hidden>
+  <div class="bx">
+    <strong>Discord設定</strong>
+    <p class="muted" style="margin:8px 0 0;font-size:13px">設定しなくても「Discordに送る」は使えます（スマホは共有シートからDiscordを選択、PCは画像をコピーして貼り付け）。<br>WebhookのURLを登録すると、決めたチャンネルへボタン1つで直接投稿します。</p>
+    <label class="field" for="dsUrl">Webhook URL</label>
+    <input id="dsUrl" type="text" inputmode="url" placeholder="https://discord.com/api/webhooks/..." autocomplete="off">
+    <p class="muted" style="margin:8px 0 0;font-size:12px">取得方法：Discordのチャンネル設定 → 連携サービス → ウェブフック → 新しいウェブフック →「ウェブフックURLをコピー」。<br>URLを知っている人は誰でも投稿できるので、人に見せないでください。この端末のブラウザ内にだけ保存されます。</p>
+    <p class="muted" id="dsNote" style="margin:8px 0 0;font-size:12px;color:#A6875A" hidden>※Claudeの中で開いているこの画面からはWebhookで送れません。GitHubに置いた版で使えます。</p>
+    <div class="row">
+      <button class="btn" id="dsDel">登録を消す</button>
+      <button class="btn primary" id="dsSave">保存</button>
+    </div>
+    <button class="ghost" id="dsClose" style="display:block;margin:10px auto 0">閉じる</button>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -277,22 +295,23 @@ const INST = {
   so:{name:"社会",desc:"集団の中での立場や役割、人とのつながりに自然と注意が向きます。"},
   sx:{name:"一対一",desc:"特定の相手との深く強いつながりや、惹きつけ合う刺激に自然と注意が向きます。"}
 };
+// 各タイプ3問：[0]根っこの動機（同点時の判定に使う）[1]根っこの恐れ・欠乏感 [2]無意識の反応パターン
 const Q_RAW = {
-  1:["物事には「正しいやり方」があると感じ、それから外れると落ち着かない","自分のミスに気づくと、他人が気にしない程度でも長く引きずる","ルールや約束を守らない人を見ると、強い苛立ちを覚える","「もっと良くできたはず」と自分の仕事を見直すことが多い","怒りを表に出すのは良くないと思い、抑えてしまうことが多い","細部の誤りや雑さが目に入り、つい直したくなる","楽しむ前に、やるべきことを終わらせないと気が済まない","自分の中に、いつも自分を採点している厳しい声がある","公平さや倫理に反することには黙っていられない","「きちんとしている人」と見られることが大切だ"],
-  2:["人が困っていると、頼まれる前に手を貸したくなる","誰かに必要とされていると感じるとき、自分の存在に価値を感じる","自分の欲しいものより、相手が欲しいものの方がよく分かる","尽くしたのに感謝されないと、ひそかに傷つく","人に頼みごとをするのは苦手だが、頼まれるのは嬉しい","相手に合わせて、自分の振る舞いを自然に変えている","人に好かれているかどうかがとても気になる","周りの人の気持ちの変化にすぐ気づく","人間関係の世話役やまとめ役を引き受けがちだ","「あなたがいてくれて助かった」と言われるのが何よりの喜びだ"],
-  3:["目標を立てて、それを達成することにやりがいを感じる","人からどう評価されているかを常に意識している","効率の悪いやり方や、もたもたした進行にイライラする","状況に応じて「求められる自分」を演じ分けられる","成果を出していないと、自分に価値がないように感じる","忙しくしているほうが落ち着く","失敗した姿を人に見せたくない","感情は後回しにして、まずやるべきことを片付ける","人より一歩先を行きたいという気持ちが強い","自分をうまく見せる方法を自然と考えている"],
-  4:["自分は他の人とどこか根本的に違うと感じる","何かが欠けているという感覚が、心のどこかにずっとある","自分の感情を深く味わい、掘り下げることが多い","ありふれたもの、平凡なものには惹かれない","人が持っているものを見て、羨ましさを感じることがある","本当の自分を理解してくれる人を求めている","気分の浮き沈みが大きいほうだ","悲しみや切なさの中にも美しさを感じる","自分らしさを表現できる場がないと息苦しい","過去の出来事や失ったものを、何度も思い返してしまう"],
-  5:["行動する前に、まずよく調べて理解したい","一人で過ごす時間がないと、ひどく消耗する","人付き合いや頼まれごとで、エネルギーを奪われると感じる","自分の内面や感情は、あまり人に見せない","興味のある分野は、とことん深く知りたい","知識や能力が足りない状態で人前に出るのが怖い","物・お金・時間を節約し、余計な依存をしないようにしている","感情的な場面では、一歩引いて観察する側になりがちだ","自分の空間やプライバシーに踏み込まれるのが苦手だ","頭の中で考えている時間がとても長い"],
-  6:["何かを始める前に、うまくいかない場合をいろいろ想定する","信頼できる人や組織に属していると安心する","人の言葉の裏にある意図を疑ってしまうことがある","決断するとき、誰かの意見や確認がほしくなる","不安を感じると、あえてそれに立ち向かおうとすることがある","一度信頼した相手には、とても誠実でいたい","責任を任されると、きちんと果たさなければと強く思う","権威やルールに対して、従いたい気持ちと反発したい気持ちの両方がある","頭の中で「もし〜だったら」という考えが止まらないことがある","「備えあれば憂いなし」が自分の信条に近い"],
-  7:["新しい体験や刺激的な計画を考えるとワクワクする","予定を詰め込みすぎて、全部こなせないことがある","つらいことや退屈なことは、できるだけ避けたい","一つのことに縛られるより、選択肢をたくさん残しておきたい","落ち込んでも、すぐに気持ちを切り替えて楽しいことを探す","アイデアが次々と浮かび、話が飛びやすい","制限されたり、指図されたりするのが嫌いだ","物事の明るい面に目を向けるのが得意だ","始めるのは得意だが、最後まで続けるのは苦手だ","人生は楽しまなければ損だと思う"],
-  8:["自分の力で状況をコントロールしていたい","弱みを人に見せるのは好きではない","不公平な扱いを受けている人を見ると、守りたくなる","思ったことははっきり言う。遠回しな言い方は苦手だ","対立や衝突をあまり恐れない","人に支配されたり、利用されたりするのは絶対に嫌だ","エネルギーが強く、何事も全力でやりがちだ","相手が信頼できるかどうか、まず試すようなところがある","決断が早く、リーダー役を自然と引き受ける","怒りを感じたら、すぐ表に出るほうだ"],
-  9:["争いごとや気まずい雰囲気はできるだけ避けたい","自分の意見より、周りの意見に合わせることが多い","本当にやるべきことを後回しにして、別のことをしてしまう","いろいろな立場の人の言い分が分かってしまう","自分が何を望んでいるのか、はっきりしないことがある","穏やかで落ち着いた環境にいたい","怒りを感じても、それに気づくのが遅い","変化を求められると、つい現状維持を選びたくなる","頑固だと言われることがあるが、表立って反抗はしない","ぼんやり過ごす時間や、決まった習慣に安心する"],
-  sp:["健康・食事・睡眠などの体調管理を大切にしている","お金や住まいなど、生活の安定が気がかりになりやすい","自分が快適に過ごせる環境を整えることにこだわる","不測の事態に備えて、蓄えや準備をしておきたい","大勢と過ごすより、自分のペースを守れることを優先する","疲れや不調のサインに敏感だ"],
-  so:["グループの中で、自分がどんな立場にいるかが気になる","所属するコミュニティや仲間の役に立ちたい","人と人とのつながりや、場の空気の流れを読むのが得意だ","社会の動きや、周りで今何が話題になっているかに関心がある","集団のルールや役割分担がはっきりしていると動きやすい","多くの人に認められたり、信頼されたりすることが嬉しい"],
-  sx:["特定の誰かとの、深く濃いつながりを強く求める","惹かれる人や物事には、一気にのめり込む","刺激や強い魅力を感じるものに心が動く","一対一の関係では、相手との「化学反応」のようなものを重視する","穏やかで退屈な関係より、多少波があっても情熱的な関係がいい","自分の存在感で人を惹きつけたいと思う"]
+  1:["「正しくあること」は、自分にとって何より譲れない価値だ","自分の中には、いつも自分を採点し正そうとする厳しい声がある","怒りを感じても、「感情的になるのは良くない」と抑え込むことが多い"],
+  2:["人から必要とされているときに、一番自分の価値を感じる","自分の欲しいものより、相手が求めているものの方がすぐ分かる","尽くしたのに感謝されないと、表には出さなくても深く傷つく"],
+  3:["結果を出していない自分には、価値がないように感じてしまう","相手や場面に合わせて、「評価される自分」を自然に演じている","自分の感情は後回しにして、まず成果につながることを優先する"],
+  4:["本当の自分らしさを見つけ、表現することが人生で一番大切だ","自分には、他の人が当たり前に持っている何かが欠けていると感じる","自分の感情を深く味わい、何度も掘り下げてしまう"],
+  5:["物事を深く理解し、頼らずに済むだけの知識や力を持っていたい","人との関わりや頼まれごとで、自分のエネルギーが削られていくと感じる","感情が動く場面でも、一歩引いて観察する側に回りがちだ"],
+  6:["信頼できる人や拠り所があって、はじめて心から安心できる","物事を始める前に、うまくいかない可能性を真っ先に考える","人の言葉や好意の裏に、別の意図がないか考えてしまう"],
+  7:["人生は、楽しいことや新しい体験で満たされていてこそだと思う","一つに縛られるより、いつでも選べる自由と選択肢を残しておきたい","つらさや退屈を感じると、すぐに楽しいことへ意識を切り替える"],
+  8:["自分の人生は、誰にも支配されず自分の力で決めたい","弱さを見せたり、弱みにつけ込まれたりすることは何より嫌だ","対立を恐れず、思ったことは正面からぶつける"],
+  9:["争いのない、穏やかで落ち着いた状態が何より大切だ","波風を立てるくらいなら、自分の意見は飲み込んでしまう","やるべき大事なことほど後回しにして、別のことで時間を過ごしてしまう"],
+  sp:["健康・お金・住まいなど、生活の安心と快適さを何より優先する","何かあったときのために、蓄えや備えをしておかないと落ち着かない"],
+  so:["集団の中で、自分がどんな立場や役割にいるかを自然と意識している","所属するコミュニティや仲間の役に立つことに、強いやりがいを感じる"],
+  sx:["特定の誰かとの、深く濃いつながりを強く求める","惹かれる人や物事には、周りが見えなくなるほどのめり込む"]
 };
 const QUESTIONS = [];
-for (const k of Object.keys(Q_RAW)) Q_RAW[k].forEach(text => QUESTIONS.push({k, text}));
+for (const k of Object.keys(Q_RAW)) Q_RAW[k].forEach((text, j) => QUESTIONS.push({k, text, core: j === 0}));
 const N = QUESTIONS.length;
 // 固定シードでシャッフル（再開しても順番が変わらない）
 const ORDER = (() => {
@@ -304,7 +323,7 @@ const ORDER = (() => {
 const SCALE = [[5,"とても当てはまる"],[4,"やや当てはまる"],[3,"どちらともいえない"],[2,"あまり当てはまらない"],[1,"まったく当てはまらない"]];
 
 /* ================= 保存 ================= */
-const LS_PROG = "enneagram.progress.v1", LS_HIST = "enneagram.history.v1";
+const LS_PROG = "enneagram.progress.v2", LS_HIST = "enneagram.history.v1";
 const store = {
   get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} },
@@ -377,25 +396,31 @@ $("qHome").onclick = () => { store.set(LS_PROG, state); renderStart(); toast("�
 document.addEventListener("keydown", e => { if ($("quiz").hidden) return; const n = +e.key; if (n >= 1 && n <= 5) answer(n); if (e.key === "Backspace" || e.key === "ArrowLeft") $("qBack").click(); });
 
 /* ================= 採点 ================= */
+const TYPE_MAX = 15, INST_MAX = 10;
 function compute(ans, name){
-  const raw = {}; for (let t = 1; t <= 9; t++) raw[t] = 0;
-  const inst = {sp:0, so:0, sx:0};
-  QUESTIONS.forEach((q, i) => { const v = ans[i] || 3; if (q.k in inst) inst[q.k] += v; else raw[q.k] += v; });
-  const pct = {}; for (let t = 1; t <= 9; t++) pct[t] = Math.round((raw[t] - 10) / 40 * 100);
-  const instPct = {}; for (const k in inst) instPct[k] = Math.round((inst[k] - 6) / 24 * 100);
-  const sorted = Object.keys(raw).map(Number).sort((a, b) => raw[b] - raw[a] || a - b);
+  const raw = {}, core = {}; for (let t = 1; t <= 9; t++) { raw[t] = 0; core[t] = 0; }
+  const inst = {sp:0, so:0, sx:0}, list = [];
+  QUESTIONS.forEach((q, i) => { const v = ans[i] || 3; list.push(v);
+    if (q.k in inst) inst[q.k] += v; else { raw[q.k] += v; if (q.core) core[q.k] = v; } });
+  const pct = {}; for (let t = 1; t <= 9; t++) pct[t] = Math.round((raw[t] - 3) / 12 * 100);
+  const instPct = {}; for (const k in inst) instPct[k] = Math.round((inst[k] - 2) / 8 * 100);
+  const cmp = (a, b) => raw[b] - raw[a] || core[b] - core[a] || a - b; // 同点なら「根っこの動機」の点が高い方
+  const sorted = Object.keys(raw).map(Number).sort(cmp);
   const main = sorted[0];
-  const close = sorted.slice(1).filter(t => pct[main] - pct[t] <= 3);
+  const close = sorted.slice(1).filter(t => raw[main] - raw[t] <= 1);
   const L = main === 1 ? 9 : main - 1, R = main === 9 ? 1 : main + 1;
   let wing, wingEven = false;
-  if (raw[L] === raw[R]) { wing = `${main}w${Math.min(L,R)}`; wingEven = true; }
-  else wing = `${main}w${raw[L] > raw[R] ? L : R}`;
-  const best = c => CENTERS[c].members.slice().sort((a, b) => raw[b] - raw[a] || a - b)[0];
-  const others = ["gut","heart","head"].filter(c => c !== TYPES[main].center).map(best).sort((a, b) => raw[b] - raw[a]);
+  if (raw[L] === raw[R] && core[L] === core[R]) { wing = `${main}w${Math.min(L,R)}`; wingEven = true; }
+  else wing = `${main}w${cmp(L, R) < 0 ? L : R}`;
+  const best = c => CENTERS[c].members.slice().sort(cmp)[0];
+  const others = ["gut","heart","head"].filter(c => c !== TYPES[main].center).map(best).sort(cmp);
   const tri = [main, ...others];
   const instOrder = Object.keys(inst).sort((a, b) => inst[b] - inst[a] || "sp so sx".indexOf(a) - "sp so sx".indexOf(b));
-  return { v:1, date:new Date().toISOString(), name:name || "", pct, instPct, sorted, main, close, wing, wingEven, wingAlt: wingEven ? `${main}w${Math.max(L,R)}` : null, tri, instOrder };
+  return { v:2, date:new Date().toISOString(), name:name || "", raw, inst, ans:list, pct, instPct, sorted, main, close, wing, wingEven, wingAlt: wingEven ? `${main}w${Math.max(L,R)}` : null, tri, instOrder };
 }
+// 表示用：点数（旧バージョンの結果は％）
+const tScore = (r, t) => r.raw ? `${r.raw[t]}/${TYPE_MAX}` : `${r.pct[t]}`;
+const iScore = (r, k) => r.inst ? `${r.inst[k]}/${INST_MAX}` : `${r.instPct[k]}`;
 function finish(){
   const r = compute(state.ans, state.name);
   const h = store.get(LS_HIST, []); h.unshift(r); store.set(LS_HIST, h.slice(0, 20));
@@ -421,16 +446,27 @@ function chartSVG(r){
     const [x, y] = g.pt(t, g.R), [lx, ly] = g.pt(t, g.R + 40), m = t === r.main;
     out.push(`<circle cx="${x}" cy="${y}" r="15" fill="${m ? "#1D1C1A" : "#FBF8F2"}" stroke="${m ? "#1D1C1A" : "#D8CCB8"}" stroke-width="1.5"/>`);
     out.push(`<text x="${x}" y="${y + 6}" text-anchor="middle" font-weight="700" font-size="14" fill="${m ? "#F3EDE2" : "#1D1C1A"}">${t}</text>`);
-    out.push(`<text x="${lx}" y="${ly + 5}" text-anchor="middle" font-size="13" fill="#6E675D">${r.pct[t]}%</text>`);
+    out.push(`<text x="${lx}" y="${ly + 5}" text-anchor="middle" font-size="13" fill="#6E675D">${r.raw ? r.raw[t] + "点" : r.pct[t] + "%"}</text>`);
   }
   out.push(`</svg>`); return out.join("");
+}
+function answersHTML(r){
+  if (!r.ans) return "";
+  const lab = v => ({5:"とても当てはまる",4:"やや当てはまる",3:"どちらともいえない",2:"あまり当てはまらない",1:"まったく当てはまらない"}[v]);
+  let i = 0; const rows = [];
+  for (const k of Object.keys(Q_RAW)) {
+    const title = k in INST ? `本能：${INST[k].name}（${r.inst[k]}/${INST_MAX}）` : `タイプ${k} ${TYPES[k].name}（${r.raw[k]}/${TYPE_MAX}）`;
+    rows.push(`<p style="margin:16px 0 6px"><strong>${esc(title)}</strong></p>`);
+    Q_RAW[k].forEach(q => { const v = r.ans[i++]; rows.push(`<div class="bar" style="grid-template-columns:1fr 34px;font-size:13px;margin-bottom:8px"><span>${esc(q)}<br><span class="muted" style="font-size:12px">${lab(v)}</span></span><span class="p">${v}</span></div>`); });
+  }
+  return `<h2>回答の内訳</h2><details><summary class="muted" style="cursor:pointer">質問ごとの評価値を見る</summary>${rows.join("")}</details>`;
 }
 function showResult(r){
   current = r;
   const T = TYPES[r.main];
   $("rMeta").textContent = `${r.name ? r.name + "　・　" : ""}${fmtDate(r.date)}`;
   const instLine = r.instOrder.map(k => INST[k].name).join(" > ");
-  const bars = (list, getP, getL, top) => `<div class="bars">${list.map(k => `<div class="bar ${k === top ? "top" : ""}"><span>${getL(k)}</span><div class="track"><div class="fill" style="width:${Math.max(2, getP(k))}%"></div></div><span class="p">${getP(k)}</span></div>`).join("")}</div>`;
+  const bars = (list, getP, getL, top, getS) => `<div class="bars">${list.map(k => `<div class="bar ${k === top ? "top" : ""}"><span>${getL(k)}</span><div class="track"><div class="fill" style="width:${Math.max(2, getP(k))}%"></div></div><span class="p">${getS(k)}</span></div>`).join("")}</div>`;
   const li = a => `<ul class="tips">${a.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
   $("rBody").innerHTML = `
     <div class="hero"><div class="n">${r.main}</div><div><div class="lab">あなたの基本タイプ</div><div class="name">${esc(T.name)}</div><div class="wing">ウイング ${esc(wingText(r))}</div><div class="lab" style="margin-top:4px">${CENTERS[T.center].name}</div></div></div>
@@ -442,10 +478,10 @@ function showResult(r){
       <div class="cell"><div class="l">ストレスの方向</div><div class="v">→ タイプ${T.stress}</div><div class="s">追い詰められたときの癖</div></div>
     </div>
     ${chartSVG(r)}
-    <h2>9タイプのスコア</h2>
-    ${bars(r.sorted, t => r.pct[t], t => `${t}　${TYPES[t].name}`, r.main)}
+    <h2>${r.raw ? "9タイプの合計点（各15点満点）" : "9タイプのスコア"}</h2>
+    ${bars(r.sorted, t => r.pct[t], t => `${t}　${TYPES[t].name}`, r.main, t => tScore(r, t))}
     <h2>本能（サブタイプ）</h2>
-    ${bars(r.instOrder, k => r.instPct[k], k => INST[k].name, r.instOrder[0])}
+    ${bars(r.instOrder, k => r.instPct[k], k => INST[k].name, r.instOrder[0], k => iScore(r, k))}
     <p class="muted" style="margin-top:12px">${esc(INST[r.instOrder[0]].desc)}</p>
     <h2>タイプ${r.main}「${esc(T.name)}」について</h2>
     <p>${esc(T.summary)}</p>
@@ -459,14 +495,15 @@ function showResult(r){
     <p><strong>ストレス下（→タイプ${T.stress}）</strong><br>${esc(T.stressText)}</p>
     <h2>トライタイプ ${r.tri.join("-")}</h2>
     <p class="muted">${r.tri.map(t => `${t}：${TYPES[t].name}（${CENTERS[TYPES[t].center].name}）`).join("<br>")}</p>
+    ${answersHTML(r)}
     <p class="muted" style="margin-top:20px;font-size:12px">※性格を決めつけるものではなく、自分を振り返るための目安です。</p>`;
   exportCache = null;
-  ["btnImg","btnPdf","btnPreview"].forEach(id => $(id).disabled = true);
+  ["btnImg","btnPdf","btnPreview","btnDiscord"].forEach(id => $(id).disabled = true);
   $("btnImg").textContent = "準備中…";
   show("result");
   prepareExports(r).then(() => {
     if (current !== r) return;
-    ["btnImg","btnPdf","btnPreview"].forEach(id => $(id).disabled = false);
+    ["btnImg","btnPdf","btnPreview","btnDiscord"].forEach(id => $(id).disabled = false);
     $("btnImg").textContent = "画像で保存";
   }).catch(err => { console.error(err); $("btnImg").textContent = "画像で保存"; toast("書き出しの準備に失敗しました"); });
 }
@@ -476,7 +513,7 @@ $("btnCopy").onclick = async () => {
   const txt = [`エニアグラム診断結果（${fmtDate(r.date)}）`,
     `基本タイプ：${r.main}（${T.name}）`, `ウイング：${wingText(r)}`, `トライタイプ：${r.tri.join("-")}`,
     `本能の順：${r.instOrder.map(k => INST[k].name).join(" > ")}`, `成長→${T.growth}／ストレス→${T.stress}`,
-    `スコア：${r.sorted.map(t => `${t}:${r.pct[t]}`).join(" ")}`].join("\n");
+    `合計点：${r.sorted.map(t => `${t}:${tScore(r, t)}`).join(" ")}`].join("\n");
   try { await navigator.clipboard.writeText(txt); toast("コピーしました"); }
   catch(e) { const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); toast("コピーしました"); } catch(_) { toast("コピーできませんでした"); } ta.remove(); }
 };
@@ -534,7 +571,7 @@ function heroB(r){
   const T = TYPES[r.main], H = 330;
   return { h: () => H + 36 + (r.close.length ? 80 : 0), draw(ctx, y){
     ctx.fillStyle = C.ink; rr(ctx, M, y, CW, H, 34); ctx.fill();
-    tx(ctx, String(r.main), M + 150, y + 268, f(300, 600, FNUM), C.bg, "center");
+    tx(ctx, String(r.main), M + 150, y + 258, f(250, 500), C.bg, "center");
     const x = M + 320;
     tx(ctx, "あなたの基本タイプ", x, y + 92, f(26), "#CFC4B1");
     tx(ctx, T.name, x, y + 160, f(56, 700), C.bg);
@@ -570,17 +607,17 @@ function chartB(r){
     for (let t = 1; t <= 9; t++) { const [a, b] = P(t, g.R), [la, lb] = P(t, g.R + 74), m = t === r.main;
       ctx.beginPath(); ctx.arc(a, b, 30, 0, Math.PI * 2); ctx.fillStyle = m ? C.ink : C.paper; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = m ? C.ink : C.line; ctx.stroke();
       tx(ctx, String(t), a, b + 11, f(30, 700), m ? C.bg : C.ink, "center");
-      tx(ctx, `${r.pct[t]}%`, la, lb + 9, f(26, 500), C.sub, "center"); }
+      tx(ctx, r.raw ? `${r.raw[t]}点` : `${r.pct[t]}%`, la, lb + 9, f(26, 500), C.sub, "center"); }
   } };
 }
-function barsB(keys, getP, getL, top){
+function barsB(keys, getP, getL, top, getS){
   const row = 56;
   return { h: () => keys.length * row + 10, draw(ctx, y){
     keys.forEach((k, i) => { const yy = y + i * row, m = k === top, bx = M + 330, bw = CW - 330 - 120;
       tx(ctx, getL(k), M, yy + 40, f(28, m ? 700 : 400), C.ink);
       ctx.fillStyle = C.soft; rr(ctx, bx, yy + 18, bw, 24, 12); ctx.fill();
       ctx.fillStyle = m ? C.ink : C.bar; rr(ctx, bx, yy + 18, Math.max(24, bw * getP(k) / 100), 24, 12); ctx.fill();
-      tx(ctx, String(getP(k)), M + CW, yy + 40, f(28, 500), C.ink, "right"); });
+      tx(ctx, getS(k), M + CW, yy + 40, f(28, 500), C.ink, "right"); });
   } };
 }
 function pairB(r){
@@ -595,8 +632,8 @@ const spacer = n => ({ kind: "space", h: () => n, draw(){} });
 function buildBlocks(r){
   const T = TYPES[r.main];
   const B = [ headerB(r), spacer(30), heroB(r), gridB(r), chartB(r),
-    headB("9タイプのスコア"), barsB(r.sorted, t => r.pct[t], t => `${t}  ${TYPES[t].name}`, r.main),
-    headB("本能（サブタイプ）"), barsB(r.instOrder, k => r.instPct[k], k => INST[k].name, r.instOrder[0]),
+    headB(r.raw ? "9タイプの合計点（各15点満点）" : "9タイプのスコア"), barsB(r.sorted, t => r.pct[t], t => `${t}  ${TYPES[t].name}`, r.main, t => tScore(r, t)),
+    headB("本能（サブタイプ）"), barsB(r.instOrder, k => r.instPct[k], k => INST[k].name, r.instOrder[0], k => iScore(r, k)),
     textB(INST[r.instOrder[0]].desc, { size: 26, color: C.sub, gap: 10 }),
     headB(`タイプ${r.main}「${T.name}」について`), textB(T.summary, { gap: 24 }), pairB(r),
     headB("強み"), listB(T.strengths),
@@ -715,6 +752,56 @@ $("btnPdf").onclick = () => exportCache && saveFile(exportCache.pdf, fname(expor
 $("btnPreview").onclick = openPreview;
 $("ovClose").onclick = () => { $("ov").hidden = true; };
 $("ov").addEventListener("click", e => { if (e.target === $("ov")) $("ov").hidden = true; });
+
+/* ================= Discord ================= */
+const LS_HOOK = "enneagram.discordWebhook.v1";
+const inClaude = () => !!(window.claude && typeof window.claude.use === "function");
+const HOOK_RE = /^https:\/\/(?:(?:ptb|canary)\.)?(?:discord|discordapp)\.com\/api\/webhooks\/\d+\/[\w-]+\/?$/;
+const isTouch = () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+function discordText(r){ const T = TYPES[r.main];
+  return `${r.name ? r.name + "の" : ""}エニアグラム診断結果：タイプ${r.main}（${T.name}）／ウイング ${r.wing}／トライタイプ ${r.tri.join("-")}／本能 ${r.instOrder.map(k => INST[k].name).join(">")}`; }
+let sending = false;
+$("btnDiscord").onclick = async () => {
+  if (!exportCache || sending) return;
+  const r = exportCache.r, png = exportCache.png, name = fname(r, "png"), text = discordText(r);
+  const hook = store.get(LS_HOOK, "");
+  // 1) Webhook（登録済み・Claude外）
+  if (hook && !inClaude()) {
+    sending = true; $("btnDiscord").textContent = "送信中…";
+    try {
+      const fd = new FormData();
+      fd.append("payload_json", JSON.stringify({ content: text }));
+      fd.append("files[0]", png, name);
+      const res = await fetch(hook + (hook.includes("?") ? "&" : "?") + "wait=true", { method: "POST", body: fd });
+      if (res.ok) toast("Discordに投稿しました");
+      else if (res.status === 404 || res.status === 401) toast("Webhook URLが無効です。Discord設定を確認してください");
+      else if (res.status === 413) toast("画像が大きすぎて送れませんでした");
+      else toast(`送信に失敗しました（${res.status}）`);
+    } catch(e) { toast("送信できなかった可能性があります。Discordを確認してください"); }
+    sending = false; $("btnDiscord").textContent = "Discordに送る"; return;
+  }
+  // 2) スマホ：共有シート → Discordを選ぶ
+  const file = new File([png], name, { type: "image/png" });
+  if (isTouch() && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], text }); } catch(e) {} return;
+  }
+  // 3) PC：画像をコピー → Discordで貼り付け
+  if (navigator.clipboard && window.ClipboardItem) {
+    try { await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
+      toast("画像をコピーしました。Discordのメッセージ欄に貼り付け（Ctrl+V / ⌘V）してください"); return; } catch(e) {}
+  }
+  // 4) Claudeアプリ内など：保存の共有シートから
+  if (dl) { try { await dl.save({ filename: name, data: png }); toast("共有シートが出たらDiscordを選んでください"); return; } catch(e) { if (e && e.code === "declined") return; } }
+  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], text }); return; } catch(e) { if (e && e.name === "AbortError") return; } }
+  openPreview(); toast("画像を保存してからDiscordに添付してください");
+};
+$("btnDiscordSet").onclick = () => { $("dsUrl").value = store.get(LS_HOOK, ""); $("dsNote").hidden = !inClaude(); $("dsDlg").hidden = false; };
+$("dsClose").onclick = () => { $("dsDlg").hidden = true; };
+$("dsSave").onclick = () => { const u = $("dsUrl").value.trim();
+  if (!u) { store.del(LS_HOOK); $("dsDlg").hidden = true; toast("Webhookの登録を消しました"); return; }
+  if (!HOOK_RE.test(u)) { toast("Discordのウェブフック URL を貼り付けてください"); return; }
+  store.set(LS_HOOK, u); $("dsDlg").hidden = true; toast("保存しました。次から「Discordに送る」で直接投稿します"); };
+$("dsDel").onclick = () => { store.del(LS_HOOK); $("dsUrl").value = ""; $("dsDlg").hidden = true; toast("Webhookの登録を消しました"); };
 
 renderStart();
 </script>
