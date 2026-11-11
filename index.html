@@ -78,6 +78,29 @@ ul.tips li{margin-bottom:4px}
 .export .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .export .row .btn+.btn{margin-top:0}
 .btn.discord{margin-top:10px;background:#5865F2;border-color:#5865F2;color:#fff}
+.modes{display:flex;flex-direction:column;gap:12px;margin-top:22px}
+.mode .mt{font-size:18px;font-weight:700;margin-bottom:6px}
+.mode .mt span{font-size:13px;font-weight:400;color:var(--sub);margin-left:10px}
+.mode p{font-size:13px;margin-bottom:12px}
+.stage{display:inline-block;font-size:12px;color:var(--bg);background:var(--accent);border-radius:999px;padding:3px 12px;margin-bottom:12px}
+.pairs{display:flex;flex-direction:column;gap:8px;margin:0 0 18px}
+.pairs>div{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.pairs b{display:inline-block;width:1.6em;color:var(--accent)}
+.qbox{min-height:12.5em;margin-bottom:16px}
+.qbox.short{min-height:0}
+.qen{font-size:19px;font-weight:500;line-height:1.6;margin:0 0 10px}
+.qja{font-size:15px;color:var(--sub);line-height:1.75;margin:0}
+.jtag{display:inline-block;font-size:11px;border:1px solid var(--line);border-radius:6px;padding:0 6px;margin-right:6px;vertical-align:1px}
+.pairs>div{display:flex;gap:6px;align-items:flex-start}
+.pairs b{flex:none}
+.pen{font-size:15px;line-height:1.6}
+.pja{font-size:13px;color:var(--sub);line-height:1.6;margin-top:2px}
+.oen{display:block;font-size:11px;font-weight:400;opacity:.6;margin-top:1px}
+.ex{margin-bottom:22px}
+.ext{font-weight:700;font-size:16px;margin-bottom:6px}
+.ex p{font-size:14px}
+.exp{background:var(--paper);border-left:3px solid var(--accent);padding:10px 12px;border-radius:8px}
+.dec p{font-size:14px}
 .small-links{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;margin-top:6px}
 /* overlay & dialog */
 .ov{position:fixed;inset:0;background:rgba(29,28,26,.78);z-index:50;display:flex;flex-direction:column;align-items:center;overflow:auto;padding:18px 14px 40px}
@@ -98,7 +121,7 @@ ul.tips li{margin-bottom:4px}
 <section id="start">
   <div class="kicker">ENNEAGRAM SELF CHECK</div>
   <h1>エニアグラム詳細診断</h1>
-  <p class="muted">全33問・目安5分。各タイプの「根っこの動機・恐れ・反応パターン」だけを聞く短縮版です。途中で閉じても、この端末なら続きから再開できます。</p>
+  <p class="muted">簡易版と精密版の2つから選べます。途中で閉じても、この端末なら続きから再開できます。</p>
 
   <div class="card" style="margin-top:18px">
     <ul class="tips">
@@ -111,9 +134,19 @@ ul.tips li{margin-bottom:4px}
   <label class="field" for="nameIn">表示名（任意・結果の画像とPDFに入ります）</label>
   <input id="nameIn" type="text" maxlength="24" placeholder="例：よる" autocomplete="off">
 
-  <div style="margin-top:22px">
-    <button class="btn primary" id="btnResume" hidden>続きから再開</button>
-    <button class="btn primary" id="btnStart">診断をはじめる</button>
+  <div class="modes">
+    <div class="card mode" data-mode="quick">
+      <div class="mt">簡易版<span>33問・約5分</span></div>
+      <p class="muted">各タイプの「根っこの動機・恐れ・反応パターン」だけを聞く短縮版。</p>
+      <button class="btn primary" data-act="resume" hidden></button>
+      <button class="btn primary" data-act="start">簡易版をはじめる</button>
+    </div>
+    <div class="card mode" data-mode="full">
+      <div class="mt">精密版<span>135問・約20分</span></div>
+      <p class="muted">各タイプ12問＋本能18問で集計し、最後に上位3タイプを直接比べる9問で判定を絞り込みます。</p>
+      <button class="btn primary" data-act="resume" hidden></button>
+      <button class="btn primary" data-act="start">精密版をはじめる</button>
+    </div>
   </div>
 
   <div id="histWrap" hidden>
@@ -133,7 +166,15 @@ ul.tips li{margin-bottom:4px}
     <button class="ghost" id="qHome">中断</button>
   </div>
   <div class="progress"><div id="qBar"></div></div>
-  <p class="qtext" id="qText"></p>
+  <span class="stage" id="qStage" hidden></span>
+  <div class="qbox" id="qBox">
+    <p class="qen" id="qText" lang="en"></p>
+    <p class="qja"><span class="jtag">意訳</span><span id="qJa"></span></p>
+  </div>
+  <div class="pairs" id="qPair" hidden>
+    <div><b>A</b><div><div class="pen" id="pA" lang="en"></div><div class="pja" id="pAj"></div></div></div>
+    <div><b>B</b><div><div class="pen" id="pB" lang="en"></div><div class="pja" id="pBj"></div></div></div>
+  </div>
   <div class="opts" id="qOpts"></div>
 </section>
 
@@ -295,8 +336,8 @@ const INST = {
   so:{name:"社会",desc:"集団の中での立場や役割、人とのつながりに自然と注意が向きます。"},
   sx:{name:"一対一",desc:"特定の相手との深く強いつながりや、惹きつけ合う刺激に自然と注意が向きます。"}
 };
-// 各タイプ3問：[0]根っこの動機（同点時の判定に使う）[1]根っこの恐れ・欠乏感 [2]無意識の反応パターン
-const Q_RAW = {
+// 簡易版：各タイプ3問 [0]根っこの動機（同点時の判定に使う）[1]根っこの恐れ・欠乏感 [2]無意識の反応パターン
+const Q_QUICK = {
   1:["「正しくあること」は、自分にとって何より譲れない価値だ","自分の中には、いつも自分を採点し正そうとする厳しい声がある","怒りを感じても、「感情的になるのは良くない」と抑え込むことが多い"],
   2:["人から必要とされているときに、一番自分の価値を感じる","自分の欲しいものより、相手が求めているものの方がすぐ分かる","尽くしたのに感謝されないと、表には出さなくても深く傷つく"],
   3:["結果を出していない自分には、価値がないように感じてしまう","相手や場面に合わせて、「評価される自分」を自然に演じている","自分の感情は後回しにして、まず成果につながることを優先する"],
@@ -310,26 +351,113 @@ const Q_RAW = {
   so:["集団の中で、自分がどんな立場や役割にいるかを自然と意識している","所属するコミュニティや仲間の役に立つことに、強いやりがいを感じる"],
   sx:["特定の誰かとの、深く濃いつながりを強く求める","惹かれる人や物事には、周りが見えなくなるほどのめり込む"]
 };
-const QUESTIONS = [];
-for (const k of Object.keys(Q_RAW)) Q_RAW[k].forEach((text, j) => QUESTIONS.push({k, text, core: j === 0}));
-const N = QUESTIONS.length;
-// 固定シードでシャッフル（再開しても順番が変わらない）
-const ORDER = (() => {
-  let s = 20261107; const rnd = () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-  const a = QUESTIONS.map((_, i) => i);
+// 精密版：簡易版の核心3問（同点時の判定に使う）＋ 行動・思考の傾向9問
+const Q_FULL_EXTRA = {
+  1:["物事には「正しいやり方」があると感じ、それから外れると落ち着かない","自分のミスに気づくと、他人が気にしない程度でも長く引きずる","ルールや約束を守らない人を見ると、強い苛立ちを覚える","「もっと良くできたはず」と自分の仕事を見直すことが多い","細部の誤りや雑さが目に入り、つい直したくなる","楽しむ前に、やるべきことを終わらせないと気が済まない","公平さや倫理に反することには黙っていられない","「きちんとしている人」と見られることが大切だ","自分が正しいと思うことは、なかなか譲れない"],
+  2:["人が困っていると、頼まれる前に手を貸したくなる","人に頼みごとをするのは苦手だが、頼まれるのは嬉しい","相手に合わせて、自分の振る舞いを自然に変えている","人に好かれているかどうかがとても気になる","周りの人の気持ちの変化にすぐ気づく","人間関係の世話役やまとめ役を引き受けがちだ","「あなたがいてくれて助かった」と言われるのが何よりの喜びだ","自分のことより、人の世話で一日が終わってしまうことがある","大切な人の役に立てていないと、自分の居場所がない気がする"],
+  3:["目標を立てて、それを達成することにやりがいを感じる","人からどう評価されているかを常に意識している","効率の悪いやり方や、もたもたした進行にイライラする","忙しくしているほうが落ち着く","失敗した姿を人に見せたくない","人より一歩先を行きたいという気持ちが強い","自分をうまく見せる方法を自然と考えている","肩書きや実績で自分を紹介すると安心する","何もしない休日には、どこか落ち着かなさを感じる"],
+  4:["自分は他の人とどこか根本的に違うと感じる","ありふれたもの、平凡なものには惹かれない","人が持っているものを見て、羨ましさを感じることがある","本当の自分を理解してくれる人を求めている","気分の浮き沈みが大きいほうだ","悲しみや切なさの中にも美しさを感じる","自分らしさを表現できる場がないと息苦しい","過去の出来事や失ったものを、何度も思い返してしまう","「分かってもらえない」と感じて、心を閉ざすことがある"],
+  5:["行動する前に、まずよく調べて理解したい","一人で過ごす時間がないと、ひどく消耗する","自分の内面や感情は、あまり人に見せない","興味のある分野は、とことん深く知りたい","知識や能力が足りない状態で人前に出るのが怖い","物・お金・時間を節約し、余計な依存をしないようにしている","自分の空間やプライバシーに踏み込まれるのが苦手だ","頭の中で考えている時間がとても長い","人に頼るより、自分で調べて解決したい"],
+  6:["決断するとき、誰かの意見や確認がほしくなる","不安を感じると、あえてそれに立ち向かおうとすることがある","一度信頼した相手には、とても誠実でいたい","責任を任されると、きちんと果たさなければと強く思う","権威やルールに対して、従いたい気持ちと反発したい気持ちの両方がある","頭の中で「もし〜だったら」という考えが止まらないことがある","「備えあれば憂いなし」が自分の信条に近い","信頼できる仲間やチームの一員でいることが心の支えになる","自分の判断に自信が持てず、何度も確かめてしまう"],
+  7:["新しい体験や刺激的な計画を考えるとワクワクする","予定を詰め込みすぎて、全部こなせないことがある","つらいことや退屈なことは、できるだけ避けたい","先の楽しみが何もないと、気持ちが沈んでくる","アイデアが次々と浮かび、話が飛びやすい","制限されたり、指図されたりするのが嫌いだ","物事の明るい面に目を向けるのが得意だ","始めるのは得意だが、最後まで続けるのは苦手だ","人生は楽しまなければ損だと思う"],
+  8:["自分の力で状況をコントロールしていたい","不公平な扱いを受けている人を見ると、守りたくなる","思ったことははっきり言う。遠回しな言い方は苦手だ","エネルギーが強く、何事も全力でやりがちだ","相手が信頼できるかどうか、まず試すようなところがある","決断が早く、リーダー役を自然と引き受ける","怒りを感じたら、すぐ表に出るほうだ","誰かに指図されると、反射的に押し返したくなる","身内や仲間のことは、何があっても守ると決めている"],
+  9:["いろいろな立場の人の言い分が分かってしまう","人と一緒にいると、自分の考えより相手のペースに流されやすい","大事な決断を、人に委ねてしまうことがある","怒りを感じても、それに気づくのが遅い","変化を求められると、つい現状維持を選びたくなる","頑固だと言われることがあるが、表立って反抗はしない","ぼんやり過ごす時間や、決まった習慣に安心する","自分が何を望んでいるのか、はっきりしないことがある","物事を「まあいいか」で済ませてしまうことが多い"]
+};
+const Q_FULL_INST = {
+  sp:["健康・食事・睡眠などの体調管理を大切にしている","お金や住まいなど、生活の安定が気がかりになりやすい","自分が快適に過ごせる環境を整えることにこだわる","不測の事態に備えて、蓄えや準備をしておきたい","大勢と過ごすより、自分のペースを守れることを優先する","疲れや不調のサインに敏感だ"],
+  so:["グループの中で、自分がどんな立場にいるかが気になる","所属するコミュニティや仲間の役に立ちたい","人と人とのつながりや、場の空気の流れを読むのが得意だ","社会の動きや、周りで今何が話題になっているかに関心がある","集団のルールや役割分担がはっきりしていると動きやすい","多くの人に認められたり、信頼されたりすることが嬉しい"],
+  sx:["特定の誰かとの、深く濃いつながりを強く求める","惹かれる人や物事には、一気にのめり込む","刺激や強い魅力を感じるものに心が動く","一対一の関係では、相手との「化学反応」のようなものを重視する","穏やかで退屈な関係より、多少波があっても情熱的な関係がいい","自分の存在感で人を惹きつけたいと思う"]
+};
+const Q_FULL = {};
+for (let t = 1; t <= 9; t++) Q_FULL[t] = Q_QUICK[t].concat(Q_FULL_EXTRA[t]);
+Object.assign(Q_FULL, Q_FULL_INST);
+// 仕上げ：上位3タイプを直接比べる（A/Bの二択を5段階で）
+const PAIR_TEXT = {
+  1:{m:"正しく、筋の通ったことをしていたい",f:"間違っている・いい加減だと思われること",r:"苛立ちを抑えつつ、正しいやり方で立て直そうとする"},
+  2:{m:"人に必要とされ、大切に思われていたい",f:"自分がいなくても、誰も困らないこと",r:"相手のために動くことで、関係をつなぎ止めようとする"},
+  3:{m:"成果を出して、価値のある人だと認められたい",f:"何も成し遂げていない人だと思われること",r:"気持ちは脇に置いて、とにかく結果を出しにいく"},
+  4:{m:"自分にしかない、本当の自分らしさを持っていたい",f:"自分がありきたりで、意味のない存在であること",r:"気持ちの中に深く入り込み、その感情を味わい尽くす"},
+  5:{m:"物事を理解し、自分の力だけでやっていける状態でいたい",f:"知識も力も足りず、何もできない状態になること",r:"一人になって、頭の中で整理できるまで距離を取る"},
+  6:{m:"信頼できるものに支えられ、安心していたい",f:"頼れるものがなく、危険に一人でさらされること",r:"最悪の事態を想定して、備えたり確認したりする"},
+  7:{m:"自由で、楽しい可能性に満ちていたい",f:"苦しさや退屈に閉じ込められ、身動きがとれないこと",r:"気持ちを切り替えて、別の楽しいことや計画に目を向ける"},
+  8:{m:"自分の人生を、自分の力でコントロールしていたい",f:"誰かに支配されたり、弱さにつけ込まれたりすること",r:"前に出て、力ずくでも状況を押し切る"},
+  9:{m:"穏やかで、波風のない状態でいたい",f:"対立で、人とのつながりや心の平穏が壊れること",r:"とりあえず受け流して、事を荒立てないようにする"}
+};
+
+// 英語原文（日本語は意訳）
+const EN_QUICK = {
+  1:["Being right is a value I will not compromise on, above almost anything else.","There is a strict inner voice that is always grading and correcting me.","Even when I feel angry, I often hold it in because getting emotional seems wrong."],
+  2:["I feel most valuable when someone needs me.","I notice what others want more quickly than what I want myself.","When I give a lot and am not appreciated, it hurts deeply, even if I don't show it."],
+  3:["When I'm not producing results, I feel as if I have no worth.","I naturally present the version of myself that will be valued in each situation.","I put my feelings aside and focus first on whatever leads to results."],
+  4:["Finding and expressing my true self is the most important thing in life.","I feel I am missing something that other people seem to have naturally.","I immerse myself in my feelings and explore them over and over."],
+  5:["I want to understand things deeply and have enough knowledge and skill not to depend on anyone.","I feel my energy being drained by social contact and requests from others.","Even in emotional moments, I tend to step back and observe."],
+  6:["I can only truly relax when I have trustworthy people or something solid to rely on.","Before starting anything, the first thing I think about is what could go wrong.","I wonder whether there are hidden motives behind people's words or kindness."],
+  7:["Life is only worth living when it is full of fun and new experiences.","Rather than committing to one thing, I want to keep the freedom to choose and plenty of options.","When I feel pain or boredom, I quickly shift my attention to something enjoyable."],
+  8:["I want to decide my own life with my own strength, controlled by no one.","Showing weakness or being taken advantage of is what I hate most.","I'm not afraid of conflict, and I say what I think directly."],
+  9:["A calm, peaceful state without conflict matters more than anything.","Rather than stir things up, I'll swallow my own opinion.","The more important a task is, the more I put it off and spend my time on other things."],
+  sp:["I prioritize security and comfort in daily life—health, money, home—above all.","I can't relax unless I've saved up or prepared for emergencies."],
+  so:["I'm naturally aware of my position and role within a group.","Being useful to my community or circle gives me a strong sense of purpose."],
+  sx:["I strongly long for a deep, intense connection with one particular person.","When someone or something attracts me, I get so absorbed that I lose sight of everything else."]
+};
+const EN_FULL_EXTRA = {
+  1:["I feel there is a \"right way\" to do things, and I'm uneasy when it isn't followed.","When I notice my own mistake, I dwell on it long after others would have let it go.","I get strongly irritated by people who don't keep rules or promises.","I often review my work, thinking it could have been better.","I notice small errors or sloppiness and feel the urge to fix them.","I can't enjoy myself until I've finished what I'm supposed to do.","I can't stay silent about things that are unfair or unethical.","It matters to me to be seen as a proper, responsible person.","I find it hard to back down on what I believe is right."],
+  2:["When someone is in trouble, I want to help before I'm asked.","I'm bad at asking for favors, but I'm happy when others ask me.","I naturally adjust my behavior to suit the person I'm with.","I care a lot about whether people like me.","I quickly notice changes in the feelings of people around me.","I tend to take on the role of caretaker or organizer in relationships.","Hearing \"I'm so glad you were here\" makes me happier than anything.","Sometimes my whole day goes to looking after others instead of myself.","If I'm not being useful to the people I care about, I feel I have no place."],
+  3:["I find fulfillment in setting goals and achieving them.","I'm always conscious of how others are evaluating me.","Inefficient methods and slow progress frustrate me.","I feel more settled when I'm busy.","I don't want others to see me fail.","I have a strong desire to stay one step ahead of others.","I naturally think about how to present myself well.","I feel secure introducing myself by my title or achievements.","A day off with nothing to do leaves me feeling restless."],
+  4:["I feel fundamentally different from other people in some way.","I'm not drawn to things that are ordinary or commonplace.","I sometimes feel envy when I see what others have.","I long for someone who understands the real me.","My moods rise and fall quite a lot.","I find beauty even in sadness and longing.","I feel stifled without a place to express who I am.","I keep going back over past events and things I've lost.","When I feel misunderstood, I sometimes shut myself off."],
+  5:["Before acting, I want to research and understand things thoroughly.","Without time alone, I become badly drained.","I don't show my inner world or feelings to others much.","I want to know everything about the fields that interest me.","I'm afraid of facing others when my knowledge or ability falls short.","I conserve things, money, and time so I won't need to depend on anyone.","I'm uncomfortable when people intrude on my space or privacy.","I spend a very long time thinking inside my head.","I'd rather research and solve things myself than rely on others."],
+  6:["When making decisions, I want someone else's opinion or confirmation.","When I feel afraid, I sometimes deliberately confront what scares me.","Once I trust someone, I want to be very loyal to them.","When given responsibility, I feel strongly that I must fulfill it properly.","Toward authority and rules, I feel both a wish to follow and a wish to rebel.","Sometimes I can't stop the \"what if…\" thoughts in my head.","\"Better safe than sorry\" is close to my personal motto.","Being part of a team or group I can trust is a pillar of support for me.","I lack confidence in my own judgment and check things again and again."],
+  7:["Thinking about new experiences or exciting plans fills me with excitement.","I pack too much into my schedule and can't get to all of it.","I want to avoid painful or boring things as much as possible.","When I have nothing to look forward to, my mood starts to sink.","Ideas come to me one after another, and my conversation jumps around.","I hate being restricted or told what to do.","I'm good at looking on the bright side of things.","I'm good at starting things but bad at seeing them through.","I think life is wasted if you don't enjoy it."],
+  8:["I want to stay in control of situations through my own strength.","When I see someone treated unfairly, I want to protect them.","I say clearly what I think; I'm bad at roundabout ways of speaking.","I have strong energy and tend to give everything my all.","I tend to test people first to see whether they can be trusted.","I decide quickly and naturally take on the role of leader.","When I feel anger, it shows right away.","When someone orders me around, I reflexively want to push back.","I've resolved to protect my family and friends no matter what."],
+  9:["I can understand the views of people on every side.","When I'm with others, I tend to go along with their pace rather than my own thoughts.","I sometimes leave important decisions to other people.","Even when I feel angry, I'm slow to notice it.","When asked to change, I tend to choose to keep things as they are.","People sometimes call me stubborn, but I don't openly rebel.","I feel at ease with idle time and familiar routines.","Sometimes I'm not sure what I really want.","I often let things go with \"oh well, it's fine.\""]
+};
+const EN_FULL_INST = {
+  sp:["I take care of my physical condition—health, diet, and sleep.","I tend to worry about stability in life, such as money and housing.","I'm particular about arranging an environment where I can be comfortable.","I want savings and preparations in place for the unexpected.","I prioritize keeping my own pace over spending time with a crowd.","I'm sensitive to signs of fatigue or illness."],
+  so:["I'm concerned about what position I hold within a group.","I want to be useful to the community and people I belong with.","I'm good at reading connections between people and the mood of a room.","I'm interested in social trends and what's being talked about around me.","I work more easily when a group's rules and roles are clear.","I'm happy when many people recognize or trust me."],
+  sx:["I strongly long for a deep, intense connection with one particular person.","I throw myself completely into people or things that attract me.","My heart is moved by things with strong stimulation or allure.","In one-on-one relationships, I value a kind of \"chemistry\" with the other person.","I'd rather have a passionate relationship with ups and downs than a calm but dull one.","I want to draw people in with my presence."]
+};
+const EN_FULL = {};
+for (let t = 1; t <= 9; t++) EN_FULL[t] = EN_QUICK[t].concat(EN_FULL_EXTRA[t]);
+Object.assign(EN_FULL, EN_FULL_INST);
+const PAIR_EN = {
+  1:{m:"To be right and do things with integrity",f:"Being seen as wrong or careless",r:"Holding back my irritation and trying to fix things the right way"},
+  2:{m:"To be needed and cherished by others",f:"That no one would be troubled if I weren't there",r:"Doing things for others to hold on to the relationship"},
+  3:{m:"To achieve results and be recognized as a person of value",f:"Being seen as someone who hasn't accomplished anything",r:"Setting my feelings aside and going all out for results"},
+  4:{m:"To have a true self that is mine alone",f:"Being ordinary and without meaning",r:"Diving deep into my feelings and experiencing them fully"},
+  5:{m:"To understand things and be able to manage on my own",f:"Lacking knowledge and ability, and being helpless",r:"Pulling back until I can sort it out alone in my head"},
+  6:{m:"To feel secure, supported by something I can trust",f:"Being exposed to danger alone, with nothing to rely on",r:"Anticipating the worst case and preparing or double-checking"},
+  7:{m:"To be free and full of enjoyable possibilities",f:"Being trapped in pain or boredom with no way out",r:"Switching gears and turning to another fun activity or plan"},
+  8:{m:"To control my own life with my own strength",f:"Being controlled by someone or having my weakness exploited",r:"Stepping forward and pushing through, by force if necessary"},
+  9:{m:"To stay calm, with no waves",f:"Conflict breaking my connections or my peace of mind",r:"Letting it slide for now and keeping things from escalating"}
+};
+const PAIR_PROMPT_EN = { m:"Deep down, which do you desire more?", f:"Deep down, which do you want to avoid more?", r:"When things go wrong, which reaction is more like you?" };
+const PAIR_PROMPT = { m:"心の奥で、より強く望んでいるのはどちら？", f:"心の奥で、より避けたいのはどちら？", r:"困ったとき、より自分に近い反応はどちら？" };
+function shuffled(n, seed){
+  let s = seed; const rnd = () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const a = Array.from({ length: n }, (_, i) => i);
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
   return a;
-})();
-const SCALE = [[5,"とても当てはまる"],[4,"やや当てはまる"],[3,"どちらともいえない"],[2,"あまり当てはまらない"],[1,"まったく当てはまらない"]];
+}
+function buildSet(qraw, enraw, coreCount, seed, extra){
+  const qs = [];
+  for (const k of Object.keys(qraw)) qraw[k].forEach((text, j) => qs.push({ k, text, en: enraw[k][j], core: !(k in INST) && j < coreCount }));
+  return Object.assign({ qraw, enraw, qs, n: qs.length, order: shuffled(qs.length, seed) }, extra);
+}
+// 固定シードでシャッフル（再開しても順番が変わらない）
+const MODES = {
+  quick: buildSet(Q_QUICK, EN_QUICK, 1, 20261107, { label:"簡易版", per:3, instPer:2, pairs:0, prog:"enneagram.progress.v2", conf:[3,2], closeBy:1 }),
+  full:  buildSet(Q_FULL, EN_FULL, 3, 20261111, { label:"精密版", per:12, instPer:6, pairs:9, prog:"enneagram.progress.full.v1", conf:[8,4], closeBy:3 })
+};
+const SCALE = [[5,"とても当てはまる","Strongly agree"],[4,"やや当てはまる","Somewhat agree"],[3,"どちらともいえない","Neutral"],[2,"あまり当てはまらない","Somewhat disagree"],[1,"まったく当てはまらない","Strongly disagree"]];
+const PAIR_SCALE = [[5,"Aにとても近い","Much closer to A"],[4,"Aにやや近い","Somewhat closer to A"],[3,"どちらともいえない","Neither"],[2,"Bにやや近い","Somewhat closer to B"],[1,"Bにとても近い","Much closer to B"]];
 
 /* ================= 保存 ================= */
-const LS_PROG = "enneagram.progress.v2", LS_HIST = "enneagram.history.v1";
+const LS_HIST = "enneagram.history.v1";
 const store = {
   get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} },
   del(k){ try { localStorage.removeItem(k); } catch(e){} }
 };
-let state = null;   // {ans:{}, idx, name}
+let state = null;   // {mode, ans:{}, idx, name, pairs, pairTop, pairAns:{}}
 let current = null; // 表示中の結果
 
 /* ================= 画面 ================= */
@@ -342,89 +470,133 @@ function ask(msg){ return new Promise(res => { $("dlgMsg").textContent = msg; $(
 const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function fmtDate(iso){ const d = new Date(iso); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")}`; }
 
+const answeredCount = p => Object.keys(p.ans || {}).length + Object.keys(p.pairAns || {}).length;
 function renderStart(){
-  const p = store.get(LS_PROG, null);
-  const hasProg = p && p.ans && Object.keys(p.ans).length > 0;
-  $("btnResume").hidden = !hasProg;
-  if (hasProg) $("btnResume").textContent = `続きから再開（${Object.keys(p.ans).length} / ${N}）`;
-  $("btnStart").textContent = hasProg ? "最初からやり直す" : "診断をはじめる";
-  $("btnStart").className = hasProg ? "btn" : "btn primary";
-  if (hasProg && p.name) $("nameIn").value = p.name;
+  for (const m of ["quick","full"]) {
+    const md = MODES[m], p = store.get(md.prog, null), card = document.querySelector(`.mode[data-mode="${m}"]`);
+    const has = p && answeredCount(p) > 0, rb = card.querySelector('[data-act="resume"]'), sb = card.querySelector('[data-act="start"]');
+    rb.hidden = !has; if (has) rb.textContent = `続きから再開（${answeredCount(p)} / ${md.n + md.pairs}）`;
+    sb.textContent = has ? "最初からやり直す" : `${md.label}をはじめる`; sb.className = has ? "btn" : "btn primary";
+    if (has && p.name && !$("nameIn").value) $("nameIn").value = p.name;
+  }
   const h = store.get(LS_HIST, []);
   $("histWrap").hidden = !h.length;
-  $("histList").innerHTML = h.map((r, i) => `<li data-i="${i}"><span><span class="t">タイプ${r.main}</span>　${esc(TYPES[r.main].name)}　<span class="muted">${esc(r.wing)}</span></span><span class="muted">${fmtDate(r.date)}</span></li>`).join("");
+  $("histList").innerHTML = h.map((r, i) => `<li data-i="${i}"><span><span class="t">タイプ${r.main}</span>　${esc(TYPES[r.main].name)}　<span class="muted">${esc(r.wing)}</span></span><span class="muted">${r.mode ? MODES[r.mode].label + "　" : ""}${fmtDate(r.date)}</span></li>`).join("");
   show("start");
 }
 $("histList").addEventListener("click", e => { const li = e.target.closest("li"); if (!li) return; const h = store.get(LS_HIST, []); const r = h[+li.dataset.i]; if (r) showResult(r); });
 $("btnClearHist").onclick = async () => { if (await ask("これまでの結果の履歴をすべて削除しますか？")) { store.del(LS_HIST); renderStart(); } };
-$("btnStart").onclick = async () => {
-  const p = store.get(LS_PROG, null);
-  if (p && p.ans && Object.keys(p.ans).length && !(await ask("途中までの回答を消して、最初からやり直しますか？"))) return;
-  state = { ans:{}, idx:0, name:$("nameIn").value.trim() };
-  store.set(LS_PROG, state); renderQ(); show("quiz");
-};
-$("btnResume").onclick = () => {
-  state = store.get(LS_PROG, null); if (!state) return;
-  const nm = $("nameIn").value.trim(); if (nm) state.name = nm;
-  renderQ(); show("quiz");
-};
+document.querySelector(".modes").addEventListener("click", async e => {
+  const b = e.target.closest("button[data-act]"); if (!b) return;
+  const m = b.closest(".mode").dataset.mode, md = MODES[m], p = store.get(md.prog, null);
+  if (b.dataset.act === "start") {
+    if (p && answeredCount(p) && !(await ask(`${md.label}の途中までの回答を消して、最初からやり直しますか？`))) return;
+    state = { mode:m, ans:{}, idx:0, name:$("nameIn").value.trim(), pairs:null, pairTop:null, pairAns:{} };
+  } else {
+    if (!p) return; state = Object.assign({ mode:m, pairs:null, pairTop:null, pairAns:{} }, p); state.mode = m;
+    const nm = $("nameIn").value.trim(); if (nm) state.name = nm;
+  }
+  saveProg(); renderQ(); show("quiz");
+});
+const saveProg = () => store.set(MODES[state.mode].prog, state);
 
 /* ================= 質問 ================= */
-const optBtns = SCALE.map(([v, label]) => { const b = document.createElement("button"); b.className = "opt"; b.innerHTML = `<span class="dot"></span><span>${label}</span>`; b.onclick = () => answer(v); $("qOpts").appendChild(b); return b; });
+const optBtns = SCALE.map(([v, label]) => { const b = document.createElement("button"); b.className = "opt"; b.innerHTML = `<span class="dot"></span><span><span class="ol">${label}</span><span class="oen" lang="en"></span></span>`; b.onclick = () => answer(v); $("qOpts").appendChild(b); return b; });
 let locking = false;
+function part1(mode, ans){
+  const md = MODES[mode], raw = {}, core = {}, inst = {sp:0, so:0, sx:0}, list = [];
+  for (let t = 1; t <= 9; t++) { raw[t] = 0; core[t] = 0; }
+  md.qs.forEach((q, i) => { const v = ans[i] || 3; list.push(v);
+    if (q.k in inst) inst[q.k] += v; else { raw[q.k] += v; if (q.core) core[q.k] += v; } });
+  return { raw, core, inst, list };
+}
+function ensurePairs(){
+  const { raw, core } = part1("full", state.ans);
+  const top3 = Object.keys(raw).map(Number).sort((a, b) => raw[b] - raw[a] || core[b] - core[a] || a - b).slice(0, 3);
+  const key = top3.join("-");
+  if (state.pairTop === key && state.pairs) return;
+  const [a, b, c] = top3, pr = [[a, b], [a, c], [b, c]], out = [];
+  ["m","f","r"].forEach((kind, ki) => pr.forEach((x, pi) => { const sw = (ki + pi) % 2 === 1; out.push({ kind, A: sw ? x[1] : x[0], B: sw ? x[0] : x[1] }); }));
+  state.pairTop = key; state.pairs = out; state.pairAns = {};
+}
 function renderQ(){
-  const qi = ORDER[state.idx], q = QUESTIONS[qi];
-  $("qCount").textContent = `${state.idx + 1} / ${N}`;
-  $("qBar").style.width = (state.idx / N * 100) + "%";
-  $("qText").textContent = q.text;
-  const cur = state.ans[qi];
-  optBtns.forEach((b, i) => b.classList.toggle("sel", SCALE[i][0] === cur));
+  const md = MODES[state.mode], tot = md.n + md.pairs, isPair = state.idx >= md.n;
+  $("qCount").textContent = `${state.idx + 1} / ${tot}`;
+  $("qBar").style.width = (state.idx / tot * 100) + "%";
+  let cur, scale;
+  if (!isPair) {
+    const qi = md.order[state.idx];
+    $("qText").textContent = md.qs[qi].en; $("qJa").textContent = md.qs[qi].text; cur = state.ans[qi]; scale = SCALE;
+    $("qStage").hidden = true; $("qPair").hidden = true; $("qBox").classList.remove("short");
+  } else {
+    ensurePairs(); const j = state.idx - md.n, p = state.pairs[j];
+    $("qStage").hidden = false; $("qStage").textContent = `仕上げ：上位3タイプの比較　${j + 1} / ${md.pairs}`;
+    $("qText").textContent = PAIR_PROMPT_EN[p.kind]; $("qJa").textContent = PAIR_PROMPT[p.kind]; $("qBox").classList.add("short");
+    $("pA").textContent = PAIR_EN[p.A][p.kind]; $("pAj").textContent = PAIR_TEXT[p.A][p.kind];
+    $("pB").textContent = PAIR_EN[p.B][p.kind]; $("pBj").textContent = PAIR_TEXT[p.B][p.kind]; $("qPair").hidden = false;
+    cur = state.pairAns[j]; scale = PAIR_SCALE;
+  }
+  optBtns.forEach((b, i) => { b.querySelector(".ol").textContent = scale[i][1]; b.querySelector(".oen").textContent = scale[i][2]; b.classList.toggle("sel", scale[i][0] === cur); });
   $("qBack").style.visibility = state.idx ? "visible" : "hidden";
 }
 function answer(v){
   if (locking) return; locking = true;
-  const qi = ORDER[state.idx]; state.ans[qi] = v; store.set(LS_PROG, state);
+  const md = MODES[state.mode], tot = md.n + md.pairs;
+  if (state.idx < md.n) state.ans[md.order[state.idx]] = v; else state.pairAns[state.idx - md.n] = v;
+  saveProg();
   optBtns.forEach((b, i) => b.classList.toggle("sel", SCALE[i][0] === v));
   setTimeout(() => {
     locking = false;
-    if (state.idx < N - 1) { state.idx++; store.set(LS_PROG, state); renderQ(); }
-    else finish();
+    if (state.idx < tot - 1) {
+      state.idx++; saveProg(); renderQ();
+      if (state.idx === md.n && md.pairs) toast("あと9問。上位3タイプを直接比べて判定を絞り込みます");
+    } else finish();
   }, 170);
 }
-$("qBack").onclick = () => { if (state.idx > 0) { state.idx--; store.set(LS_PROG, state); renderQ(); } };
-$("qHome").onclick = () => { store.set(LS_PROG, state); renderStart(); toast("回答を保存しました。続きから再開できます"); };
-document.addEventListener("keydown", e => { if ($("quiz").hidden) return; const n = +e.key; if (n >= 1 && n <= 5) answer(n); if (e.key === "Backspace" || e.key === "ArrowLeft") $("qBack").click(); });
+$("qBack").onclick = () => { if (state.idx > 0) { state.idx--; saveProg(); renderQ(); } };
+$("qHome").onclick = () => { saveProg(); renderStart(); toast("回答を保存しました。続きから再開できます"); };
+document.addEventListener("keydown", e => { if ($("quiz").hidden) return; const n = +e.key; if (n >= 1 && n <= 5) answer(6 - n); if (e.key === "Backspace" || e.key === "ArrowLeft") $("qBack").click(); });
 
 /* ================= 採点 ================= */
-const TYPE_MAX = 15, INST_MAX = 10;
-function compute(ans, name){
-  const raw = {}, core = {}; for (let t = 1; t <= 9; t++) { raw[t] = 0; core[t] = 0; }
-  const inst = {sp:0, so:0, sx:0}, list = [];
-  QUESTIONS.forEach((q, i) => { const v = ans[i] || 3; list.push(v);
-    if (q.k in inst) inst[q.k] += v; else { raw[q.k] += v; if (q.core) core[q.k] = v; } });
-  const pct = {}; for (let t = 1; t <= 9; t++) pct[t] = Math.round((raw[t] - 3) / 12 * 100);
-  const instPct = {}; for (const k in inst) instPct[k] = Math.round((inst[k] - 2) / 8 * 100);
-  const cmp = (a, b) => raw[b] - raw[a] || core[b] - core[a] || a - b; // 同点なら「根っこの動機」の点が高い方
+function compute(mode, ans, name, pairs, pairAns, pairTop){
+  const md = MODES[mode], { raw, core, inst, list } = part1(mode, ans), per = md.per, ip = md.instPer;
+  const pct = {}; for (let t = 1; t <= 9; t++) pct[t] = Math.round((raw[t] - per) / (4 * per) * 100);
+  const instPct = {}; for (const k in inst) instPct[k] = Math.round((inst[k] - ip) / (4 * ip) * 100);
+  const bonus = {}, pairList = []; for (let t = 1; t <= 9; t++) bonus[t] = 0;
+  (pairs || []).forEach((p, i) => { const v = (pairAns && pairAns[i]) || 3, d = v - 3; pairList.push(v); if (d > 0) bonus[p.A] += d; else if (d < 0) bonus[p.B] -= d; });
+  const total = {}; for (let t = 1; t <= 9; t++) total[t] = raw[t] + bonus[t];
+  const cmp = (a, b) => total[b] - total[a] || raw[b] - raw[a] || core[b] - core[a] || a - b; // 同点なら「根っこの動機」の点が高い方
   const sorted = Object.keys(raw).map(Number).sort(cmp);
-  const main = sorted[0];
-  const close = sorted.slice(1).filter(t => raw[main] - raw[t] <= 1);
+  const main = sorted[0], margin = total[main] - total[sorted[1]];
+  const conf = margin >= md.conf[0] ? "高い" : margin >= md.conf[1] ? "ふつう" : "低め";
+  const close = sorted.slice(1).filter(t => total[main] - total[t] <= md.closeBy);
   const L = main === 1 ? 9 : main - 1, R = main === 9 ? 1 : main + 1;
+  const wcmp = (a, b) => raw[b] - raw[a] || core[b] - core[a];
   let wing, wingEven = false;
-  if (raw[L] === raw[R] && core[L] === core[R]) { wing = `${main}w${Math.min(L,R)}`; wingEven = true; }
-  else wing = `${main}w${cmp(L, R) < 0 ? L : R}`;
+  if (wcmp(L, R) === 0) { wing = `${main}w${Math.min(L,R)}`; wingEven = true; }
+  else wing = `${main}w${wcmp(L, R) < 0 ? L : R}`;
   const best = c => CENTERS[c].members.slice().sort(cmp)[0];
   const others = ["gut","heart","head"].filter(c => c !== TYPES[main].center).map(best).sort(cmp);
   const tri = [main, ...others];
   const instOrder = Object.keys(inst).sort((a, b) => inst[b] - inst[a] || "sp so sx".indexOf(a) - "sp so sx".indexOf(b));
-  return { v:2, date:new Date().toISOString(), name:name || "", raw, inst, ans:list, pct, instPct, sorted, main, close, wing, wingEven, wingAlt: wingEven ? `${main}w${Math.max(L,R)}` : null, tri, instOrder };
+  return { v:3, mode, date:new Date().toISOString(), name:name || "", typeMax: per * 5, instMax: ip * 5,
+    raw, inst, bonus, total, ans:list, pairs: pairs ? pairs.map(p => ({ kind:p.kind, A:p.A, B:p.B })) : null, pairAns: pairList,
+    top3: pairTop ? pairTop.split("-").map(Number) : null, pct, instPct, sorted, main, margin, conf, close,
+    wing, wingEven, wingAlt: wingEven ? `${main}w${Math.max(L,R)}` : null, tri, instOrder };
 }
 // 表示用：点数（旧バージョンの結果は％）
-const tScore = (r, t) => r.raw ? `${r.raw[t]}/${TYPE_MAX}` : `${r.pct[t]}`;
-const iScore = (r, k) => r.inst ? `${r.inst[k]}/${INST_MAX}` : `${r.instPct[k]}`;
+const tScore = (r, t) => r.raw ? `${r.raw[t]}/${r.typeMax || 15}` : `${r.pct[t]}`;
+const iScore = (r, k) => r.inst ? `${r.inst[k]}/${r.instMax || 10}` : `${r.instPct[k]}`;
+const scoreTitle = r => r.raw ? `9タイプの合計点（各${r.typeMax || 15}点満点）` : "9タイプのスコア";
+const modeLabel = r => r.mode ? MODES[r.mode].label : (r.raw ? "簡易版" : "");
+const rawOrder = r => r.raw ? r.sorted.slice().sort((a, b) => r.raw[b] - r.raw[a] || r.sorted.indexOf(a) - r.sorted.indexOf(b)) : r.sorted;
+const showPairs = r => r.mode === "full" && r.top3 && r.bonus;
+const pairMax = 12;
 function finish(){
-  const r = compute(state.ans, state.name);
+  const md = MODES[state.mode];
+  const r = compute(state.mode, state.ans, state.name, md.pairs ? state.pairs : null, state.pairAns, md.pairs ? state.pairTop : null);
   const h = store.get(LS_HIST, []); h.unshift(r); store.set(LS_HIST, h.slice(0, 20));
-  store.del(LS_PROG); state = null;
+  store.del(md.prog); state = null;
   showResult(r);
 }
 
@@ -452,24 +624,107 @@ function chartSVG(r){
 }
 function answersHTML(r){
   if (!r.ans) return "";
+  const md = MODES[r.mode || "quick"]; if (r.ans.length !== md.n) return "";
   const lab = v => ({5:"とても当てはまる",4:"やや当てはまる",3:"どちらともいえない",2:"あまり当てはまらない",1:"まったく当てはまらない"}[v]);
+  const row = (qhtml, sub, v) => `<div class="bar" style="grid-template-columns:1fr 34px;font-size:13px;margin-bottom:10px"><span>${qhtml}<br><span class="muted" style="font-size:12px">→ ${esc(sub)}</span></span><span class="p">${v}</span></div>`;
   let i = 0; const rows = [];
-  for (const k of Object.keys(Q_RAW)) {
-    const title = k in INST ? `本能：${INST[k].name}（${r.inst[k]}/${INST_MAX}）` : `タイプ${k} ${TYPES[k].name}（${r.raw[k]}/${TYPE_MAX}）`;
+  for (const k of Object.keys(md.qraw)) {
+    const title = k in INST ? `本能：${INST[k].name}（${r.inst[k]}/${r.instMax || 10}）` : `タイプ${k} ${TYPES[k].name}（${r.raw[k]}/${r.typeMax || 15}）`;
     rows.push(`<p style="margin:16px 0 6px"><strong>${esc(title)}</strong></p>`);
-    Q_RAW[k].forEach(q => { const v = r.ans[i++]; rows.push(`<div class="bar" style="grid-template-columns:1fr 34px;font-size:13px;margin-bottom:8px"><span>${esc(q)}<br><span class="muted" style="font-size:12px">${lab(v)}</span></span><span class="p">${v}</span></div>`); });
+    md.qraw[k].forEach((q, j) => { const v = r.ans[i++]; rows.push(row(`<span lang="en">${esc(md.enraw[k][j])}</span><br><span class="muted">${esc(q)}</span>`, lab(v), v)); });
+  }
+  if (showPairs(r)) {
+    rows.push(`<p style="margin:16px 0 6px"><strong>仕上げ：上位3タイプの比較</strong></p>`);
+    const pl = {5:"Aにとても近い",4:"Aにやや近い",3:"どちらともいえない",2:"Bにやや近い",1:"Bにとても近い"};
+    r.pairs.forEach((p, j) => { const v = r.pairAns[j];
+      rows.push(row(`<span lang="en">${esc(PAIR_PROMPT_EN[p.kind])}</span>　<span class="muted">${esc(PAIR_PROMPT[p.kind])}</span><br>A：<span lang="en">${esc(PAIR_EN[p.A][p.kind])}</span> <span class="muted">${esc(PAIR_TEXT[p.A][p.kind])}（タイプ${p.A}）</span><br>B：<span lang="en">${esc(PAIR_EN[p.B][p.kind])}</span> <span class="muted">${esc(PAIR_TEXT[p.B][p.kind])}（タイプ${p.B}）</span>`, pl[v], v)); });
   }
   return `<h2>回答の内訳</h2><details><summary class="muted" style="cursor:pointer">質問ごとの評価値を見る</summary>${rows.join("")}</details>`;
+}
+const KIND_NAME = { m:"望むもの", f:"避けたいもの", r:"困ったときの反応" };
+function pairDetail(r, x, y){
+  const out = [];
+  r.pairs.forEach((p, i) => {
+    if (!((p.A === x && p.B === y) || (p.A === y && p.B === x))) return;
+    const v = r.pairAns[i], d = v - 3, win = d > 0 ? p.A : d < 0 ? p.B : null;
+    out.push(`【${KIND_NAME[p.kind]}】「${PAIR_TEXT[x][p.kind]}」（タイプ${x}）と「${PAIR_TEXT[y][p.kind]}」（タイプ${y}）では、` +
+      (win ? `タイプ${win}側を選びました（${Math.abs(d) === 2 ? "とても近い" : "やや近い"}：タイプ${win}に＋${Math.abs(d)}点）。` : `「どちらともいえない」を選びました（加点なし）。`));
+  });
+  return out;
+}
+// 判定の決まり方（最終質問で順位が変わった場合の説明を含む）
+function decisionLines(r){
+  if (!r.raw || !r.sorted) return null;
+  const mode = r.mode || "quick", md = MODES[mode];
+  const core = (r.ans && r.ans.length === md.n) ? part1(mode, r.ans).core : null;
+  const cc = (a, b) => core ? core[b] - core[a] : 0;
+  const L = [];
+  if (showPairs(r)) {
+    const rawOrd = r.top3.slice().sort((a, b) => r.raw[b] - r.raw[a] || cc(a, b) || a - b);
+    const finOrd = r.top3.slice().sort((a, b) => r.total[b] - r.total[a] || r.raw[b] - r.raw[a] || cc(a, b) || a - b);
+    if (rawOrd[0] !== finOrd[0]) {
+      const a = rawOrd[0], b = finOrd[0];
+      L.push(`仕上げの比較質問で1位が入れ替わりました。前半の合計点ではタイプ${a}「${TYPES[a].name}」が${r.raw[a]}点で1位、タイプ${b}「${TYPES[b].name}」は${r.raw[b]}点でした。比較質問でタイプ${b}が＋${r.bonus[b]}点、タイプ${a}が＋${r.bonus[a]}点を得た結果、最終点はタイプ${b}が${r.total[b]}点、タイプ${a}が${r.total[a]}点となり、タイプ${b}を基本タイプと判定しました。`);
+      L.push(`決め手になった、タイプ${b}とタイプ${a}を直接比べた回答は次のとおりです。`);
+      L.push(...pairDetail(r, b, a));
+      L.push(`前半の合計点が高かったタイプ${a}は、行動や考え方の傾向としては強く出ています。ただ、根っこの動機・恐れ・反応を直接比べると、タイプ${b}の方が自分に近いと答えたことになります。タイプ${a}の特徴は、ウイングやトライタイプ、ふだん身につけている振る舞いとして表れている可能性があります。`);
+    } else if (rawOrd.join() !== finOrd.join()) {
+      L.push(`1位のタイプ${finOrd[0]}は変わりませんでしたが、比較質問で2位と3位が入れ替わりました（前半の合計点：${rawOrd.slice(1).map(t => `タイプ${t} ${r.raw[t]}点`).join("・")} → 最終点：${finOrd.slice(1).map(t => `タイプ${t} ${r.total[t]}点`).join("・")}）。`);
+      L.push(`入れ替わったタイプ${finOrd[1]}とタイプ${finOrd[2]}を直接比べた回答は次のとおりです。`);
+      L.push(...pairDetail(r, finOrd[1], finOrd[2]));
+      L.push(`2位は基本タイプに次いで近いタイプで、トライタイプや「もしかしたらこちらかも」という候補を読み解く参考になります。`);
+    } else {
+      L.push(`比較質問でも順位は変わらず、前半の合計点による判定が裏付けられました（${finOrd.map(t => `タイプ${t}：${r.raw[t]}＋${r.bonus[t]}＝${r.total[t]}点`).join("、")}）。`);
+      L.push(`1位のタイプ${finOrd[0]}と2位のタイプ${finOrd[1]}を直接比べた回答は次のとおりです。`);
+      L.push(...pairDetail(r, finOrd[0], finOrd[1]));
+    }
+    L.push("比較質問は、2つのタイプの「根っこの動機・恐れ・困ったときの反応」を直接並べて選ぶ形式です。行動の傾向を幅広く聞く前半の質問より核心に近い判断材料になるため、前半の点が近いときほど、比較の結果が判定を左右します。");
+  } else {
+    const [a, b] = r.sorted;
+    if (r.raw[a] === r.raw[b]) {
+      if (core && core[a] !== core[b]) L.push(`合計点がタイプ${a}とタイプ${b}で同じ${r.raw[a]}点だったため、各タイプの最初の質問（根っこの動機）の点が高いタイプ${a}を優先しました（タイプ${a}：${core[a]}点、タイプ${b}：${core[b]}点）。動機はエニアグラムでタイプを分ける一番の基準だからです。`);
+      else L.push(`合計点も根っこの動機の点も、タイプ${a}とタイプ${b}で同じでした。ここでは仮にタイプ${a}としています。両方の説明を読み比べてしっくりくる方を選ぶか、精密版で受け直すと、比較質問で判定を絞り込めます。`);
+    } else L.push(`合計点がもっとも高いタイプ${a}（${r.raw[a]}点）を基本タイプとしています。2位はタイプ${b}（${r.raw[b]}点）で、差は${r.raw[a] - r.raw[b]}点です。`);
+  }
+  return L;
+}
+// 各項目の詳しい説明
+function explainItems(r){
+  const T = TYPES[r.main], md = MODES[r.mode || "quick"];
+  const P = t => r.raw ? `${r.raw[t]}点` : `${r.pct[t]}%`, IP = k => r.inst ? `${r.inst[k]}点` : `${r.instPct[k]}%`;
+  const s2 = r.sorted[1], Lw = r.main === 1 ? 9 : r.main - 1, Rw = r.main === 9 ? 1 : r.main + 1, io = r.instOrder;
+  const items = [
+    { t:"基本タイプ", d:"エニアグラムの9タイプのうち、あなたの「根っこの動機」にもっとも近いタイプです。エニアグラムは「何をするか」ではなく「なぜそうするのか」で性格を分けるので、同じ行動でも動機が違えば別のタイプになります。基本タイプは一生を通じて変わらないとされ、変わるのはそのタイプの健全さの度合いです。",
+      p:`今回はタイプ${r.main}「${T.name}」がもっとも高く（${showPairs(r) ? `最終点${r.total[r.main]}点` : P(r.main)}）、2位はタイプ${s2}「${TYPES[s2].name}」でした。` },
+    { t:"9タイプの合計点", d:`各タイプの質問への回答を「とても当てはまる＝5点」〜「まったく当てはまらない＝1点」で足した点数です${r.raw ? `（各${r.typeMax}点満点）` : ""}。誰でも9タイプすべての要素を持っているので、複数のタイプが高く出るのは自然なことです。点が高いほど、そのタイプの考え方や反応が自分に当てはまると答えたことを示します。`,
+      p:`${showPairs(r) ? "前半の合計点の" : ""}上位3つは ${rawOrder(r).slice(0, 3).map(t => `タイプ${t}（${P(t)}）`).join("、")}、もっとも低いのはタイプ${rawOrder(r)[8]}（${P(rawOrder(r)[8])}）です。低いタイプは、あなたが意識しにくい・使い慣れていない視点を表します。` }
+  ];
+  if (r.conf) items.push({ t:"判定の確かさ", d:`1位と2位の最終点の差から3段階で出しています。${md.label}では、差が${md.conf[0]}点以上で「高い」、${md.conf[1]}点以上で「ふつう」、それ未満で「低め」です。「低め」のときは、上位タイプの説明を読み比べて、根っこの動機がよりしっくりくる方を選ぶのがおすすめです。`,
+    p:`今回の差は${r.margin}点で、判定の確かさは「${r.conf}」です。` });
+  items.push(
+    { t:"センター", d:"9タイプは3つのセンターに分かれます。本能センター（8・9・1）は怒りや自律、感情センター（2・3・4）は自己イメージや承認、思考センター（5・6・7）は不安や安心がテーマです。基本タイプのセンターは、物事を受け止めるときに最初に働きやすい領域を表します。",
+      p:`あなたは${CENTERS[T.center].name}です。${CENTERS[T.center].theme}` },
+    { t:"ウイング", d:"基本タイプの両隣にある2つのタイプのうち、より強く出ている方です。基本タイプに味付けをするような存在で、同じタイプでもウイングによって印象や行動がかなり変わります。",
+      p:`タイプ${r.main}の両隣はタイプ${Lw}（${P(Lw)}）とタイプ${Rw}（${P(Rw)}）です。${r.wingEven ? "点が同じだったため、両方の影響があると考えられます。" : `点の高いタイプ${r.wing.split("w")[1]}がウイングになります。`}\n${r.wing}：${WINGS[r.wing]}${r.wingEven ? `\n${r.wingAlt}：${WINGS[r.wingAlt]}` : ""}` },
+    { t:"トライタイプ", d:"3つのセンター（本能・感情・思考）それぞれでもっとも点が高いタイプを、点の高い順に並べたものです。人は3つのセンターをすべて使っているので、基本タイプだけでは説明しきれない「動き方・感じ方・考え方」の組み合わせを表します。",
+      p:`${r.tri.map(t => `${CENTERS[TYPES[t].center].name}：タイプ${t}「${TYPES[t].name}」（${P(t)}）`).join("\n")}\n→ トライタイプ ${r.tri.join("-")}` },
+    { t:"本能の順", d:"人が無意識にエネルギーを向ける3つの領域（自己保存・社会・一対一）の強さの順番です。1番目はもっとも自然に注意が向く領域、3番目は後回しになりやすい「盲点」です。同じタイプでも本能の順によって、こだわる場面や悩みの種が大きく変わります。",
+      p:`${io.map((k, i) => `${i + 1}番目：${INST[k].name}（${IP(k)}）`).join("、")}\n${INST[io[0]].name}：${INST[io[0]].desc}\n盲点の「${INST[io[2]].name}」は、意識して時間や注意を向けるとバランスが取りやすくなります。` },
+    { t:"成長の方向", d:"エニアグラムの図で、基本タイプから線で結ばれたタイプの一つです。心に余裕があり健全な状態のとき、そのタイプの良い面が自然と現れやすいとされます。意識して取り入れると、成長のヒントになります。",
+      p:`タイプ${r.main} → タイプ${T.growth}「${TYPES[T.growth].name}」\n${T.growthText}` },
+    { t:"ストレスの方向", d:"強いストレスが続いたとき、もう一方の線の先にあるタイプの、あまり健全でない面が出やすくなるとされます。悪いことではなく、自分の「危険信号」として知っておくと、早めに休むきっかけになります。",
+      p:`タイプ${r.main} → タイプ${T.stress}「${TYPES[T.stress].name}」\n${T.stressText}` });
+  return items;
 }
 function showResult(r){
   current = r;
   const T = TYPES[r.main];
-  $("rMeta").textContent = `${r.name ? r.name + "　・　" : ""}${fmtDate(r.date)}`;
+  $("rMeta").textContent = [modeLabel(r), r.name, fmtDate(r.date)].filter(Boolean).join("　・　");
   const instLine = r.instOrder.map(k => INST[k].name).join(" > ");
   const bars = (list, getP, getL, top, getS) => `<div class="bars">${list.map(k => `<div class="bar ${k === top ? "top" : ""}"><span>${getL(k)}</span><div class="track"><div class="fill" style="width:${Math.max(2, getP(k))}%"></div></div><span class="p">${getS(k)}</span></div>`).join("")}</div>`;
   const li = a => `<ul class="tips">${a.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
   $("rBody").innerHTML = `
-    <div class="hero"><div class="n">${r.main}</div><div><div class="lab">あなたの基本タイプ</div><div class="name">${esc(T.name)}</div><div class="wing">ウイング ${esc(wingText(r))}</div><div class="lab" style="margin-top:4px">${CENTERS[T.center].name}</div></div></div>
+    <div class="hero"><div class="n">${r.main}</div><div><div class="lab">あなたの基本タイプ</div><div class="name">${esc(T.name)}</div><div class="wing">ウイング ${esc(wingText(r))}</div><div class="lab" style="margin-top:4px">${CENTERS[T.center].name}</div>${r.conf ? `<div class="lab">判定の確かさ：${r.conf}</div>` : ""}</div></div>
     ${r.close.length ? `<p class="close">※ ${r.close.map(t => `タイプ${t}（${TYPES[t].name}）`).join("、")} も僅差です。説明を読み比べて、よりしっくりくる方を選んでください。</p>` : ""}
     <div class="grid">
       <div class="cell"><div class="l">トライタイプ</div><div class="v">${r.tri.join("-")}</div><div class="s">各センターの最上位タイプ</div></div>
@@ -478,8 +733,12 @@ function showResult(r){
       <div class="cell"><div class="l">ストレスの方向</div><div class="v">→ タイプ${T.stress}</div><div class="s">追い詰められたときの癖</div></div>
     </div>
     ${chartSVG(r)}
-    <h2>${r.raw ? "9タイプの合計点（各15点満点）" : "9タイプのスコア"}</h2>
-    ${bars(r.sorted, t => r.pct[t], t => `${t}　${TYPES[t].name}`, r.main, t => tScore(r, t))}
+    <h2>${scoreTitle(r)}</h2>
+    ${bars(rawOrder(r), t => r.pct[t], t => `${t}　${TYPES[t].name}`, r.main, t => tScore(r, t))}
+    ${showPairs(r) ? `<h2>仕上げ：上位3タイプの比較</h2>
+    ${bars(r.top3, t => r.bonus[t] / pairMax * 100, t => `${t}　${TYPES[t].name}`, r.main, t => `${r.bonus[t]}/${pairMax}`)}
+    <p class="muted" style="margin-top:12px">${r.top3.slice().sort((a, b) => r.total[b] - r.total[a]).map(t => `タイプ${t}：合計${r.raw[t]}点＋比較${r.bonus[t]}点＝<strong>${r.total[t]}点</strong>`).join("<br>")}<br>最終点がもっとも高いタイプを基本タイプとしています。</p>` : ""}
+    ${decisionLines(r) ? `<h2>判定の決まり方</h2><div class="dec">${decisionLines(r).map(l => `<p>${esc(l)}</p>`).join("")}</div>` : ""}
     <h2>本能（サブタイプ）</h2>
     ${bars(r.instOrder, k => r.instPct[k], k => INST[k].name, r.instOrder[0], k => iScore(r, k))}
     <p class="muted" style="margin-top:12px">${esc(INST[r.instOrder[0]].desc)}</p>
@@ -495,6 +754,8 @@ function showResult(r){
     <p><strong>ストレス下（→タイプ${T.stress}）</strong><br>${esc(T.stressText)}</p>
     <h2>トライタイプ ${r.tri.join("-")}</h2>
     <p class="muted">${r.tri.map(t => `${t}：${TYPES[t].name}（${CENTERS[TYPES[t].center].name}）`).join("<br>")}</p>
+    <h2>各項目の詳しい説明</h2>
+    ${explainItems(r).map(it => `<div class="ex"><div class="ext">${esc(it.t)}</div><p>${esc(it.d)}</p><p class="exp">${esc(it.p).replace(/\n/g, "<br>")}</p></div>`).join("")}
     ${answersHTML(r)}
     <p class="muted" style="margin-top:20px;font-size:12px">※性格を決めつけるものではなく、自分を振り返るための目安です。</p>`;
   exportCache = null;
@@ -510,10 +771,10 @@ function showResult(r){
 $("btnTop").onclick = renderStart;
 $("btnCopy").onclick = async () => {
   const r = current, T = TYPES[r.main];
-  const txt = [`エニアグラム診断結果（${fmtDate(r.date)}）`,
-    `基本タイプ：${r.main}（${T.name}）`, `ウイング：${wingText(r)}`, `トライタイプ：${r.tri.join("-")}`,
+  const txt = [`エニアグラム診断結果（${[modeLabel(r), fmtDate(r.date)].filter(Boolean).join("・")}）`,
+    `基本タイプ：${r.main}（${T.name}）${r.conf ? `／判定の確かさ：${r.conf}` : ""}`, `ウイング：${wingText(r)}`, `トライタイプ：${r.tri.join("-")}`,
     `本能の順：${r.instOrder.map(k => INST[k].name).join(" > ")}`, `成長→${T.growth}／ストレス→${T.stress}`,
-    `合計点：${r.sorted.map(t => `${t}:${tScore(r, t)}`).join(" ")}`].join("\n");
+    `合計点：${rawOrder(r).map(t => `${t}:${tScore(r, t)}`).join(" ")}`].concat(showPairs(r) ? [`比較点：${r.top3.map(t => `${t}:${r.bonus[t]}/${pairMax}`).join(" ")}`] : []).join("\n");
   try { await navigator.clipboard.writeText(txt); toast("コピーしました"); }
   catch(e) { const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); toast("コピーしました"); } catch(_) { toast("コピーできませんでした"); } ta.remove(); }
 };
@@ -563,7 +824,7 @@ function headerB(r){
   return { h: () => 230, draw(ctx, y){
     tx(ctx, "E N N E A G R A M     S E L F   C H E C K", M, y + 40, f(24, 600, FNUM), C.accent);
     tx(ctx, "エニアグラム診断結果", M, y + 120, f(60, 700), C.ink);
-    tx(ctx, `${r.name ? r.name + "　・　" : ""}${fmtDate(r.date)}`, M, y + 176, f(28), C.sub);
+    tx(ctx, [modeLabel(r), r.name, fmtDate(r.date)].filter(Boolean).join("　・　"), M, y + 176, f(28), C.sub);
     ctx.fillStyle = C.ink; ctx.fillRect(M, y + 206, CW, 3);
   } };
 }
@@ -576,7 +837,7 @@ function heroB(r){
     tx(ctx, "あなたの基本タイプ", x, y + 92, f(26), "#CFC4B1");
     tx(ctx, T.name, x, y + 160, f(56, 700), C.bg);
     tx(ctx, `ウイング  ${r.wing}${r.wingEven ? " / " + r.wingAlt : ""}`, x, y + 222, f(32, 500), C.bg);
-    tx(ctx, CENTERS[T.center].name, x, y + 270, f(26), "#CFC4B1");
+    tx(ctx, CENTERS[T.center].name + (r.conf ? `　・　判定の確かさ：${r.conf}` : ""), x, y + 270, f(26), "#CFC4B1");
     if (r.close.length) {
       const s = `※ ${r.close.map(t => `タイプ${t}`).join("・")} も僅差です`;
       tx(ctx, s, M, y + H + 64, f(26), C.sub);
@@ -632,7 +893,10 @@ const spacer = n => ({ kind: "space", h: () => n, draw(){} });
 function buildBlocks(r){
   const T = TYPES[r.main];
   const B = [ headerB(r), spacer(30), heroB(r), gridB(r), chartB(r),
-    headB(r.raw ? "9タイプの合計点（各15点満点）" : "9タイプのスコア"), barsB(r.sorted, t => r.pct[t], t => `${t}  ${TYPES[t].name}`, r.main, t => tScore(r, t)),
+    headB(scoreTitle(r)), barsB(rawOrder(r), t => r.pct[t], t => `${t}  ${TYPES[t].name}`, r.main, t => tScore(r, t)),
+    ...(showPairs(r) ? [headB("仕上げ：上位3タイプの比較"), barsB(r.top3, t => r.bonus[t] / pairMax * 100, t => `${t}  ${TYPES[t].name}`, r.main, t => `${r.bonus[t]}/${pairMax}`),
+      textB(r.top3.slice().sort((a, b) => r.total[b] - r.total[a]).map(t => `タイプ${t}：合計${r.raw[t]}点＋比較${r.bonus[t]}点＝${r.total[t]}点`).join("\n"), { size: 26, color: C.sub, gap: 10 })] : []),
+    ...(decisionLines(r) ? [headB("判定の決まり方"), ...decisionLines(r).map(l => textB(l, { size: 26, gap: 14 }))] : []),
     headB("本能（サブタイプ）"), barsB(r.instOrder, k => r.instPct[k], k => INST[k].name, r.instOrder[0], k => iScore(r, k)),
     textB(INST[r.instOrder[0]].desc, { size: 26, color: C.sub, gap: 10 }),
     headB(`タイプ${r.main}「${T.name}」について`), textB(T.summary, { gap: 24 }), pairB(r),
@@ -646,7 +910,9 @@ function buildBlocks(r){
     textB(`ストレス下（→タイプ${T.stress}）`, { weight: 700 }), textB(T.stressText),
     headB(`トライタイプ ${r.tri.join("-")}`),
     textB(r.tri.map(t => `${t}：${TYPES[t].name}（${CENTERS[TYPES[t].center].name}）`).join("\n"), { color: C.sub }),
-    spacer(40), textB("※性格を決めつけるものではなく、自分を振り返るための目安です。", { size: 22, color: C.sub }));
+    headB("各項目の詳しい説明"));
+  explainItems(r).forEach(it => B.push(Object.assign(textB(it.t, { size: 30, weight: 700, gap: 4 }), { kind: "head" }), textB(it.d, { size: 26, color: C.sub, gap: 8 }), textB(it.p, { size: 26, gap: 30 })));
+  B.push(spacer(30), textB("※性格を決めつけるものではなく、自分を振り返るための目安です。", { size: 22, color: C.sub }));
   return B;
 }
 function newCanvas(h, scale){ const c = document.createElement("canvas"); c.width = Math.round(W * scale); c.height = Math.round(h * scale); const ctx = c.getContext("2d"); ctx.scale(scale, scale); ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, h); return [c, ctx]; }
@@ -710,7 +976,7 @@ async function buildPDF(canvases){
 
 async function ensureFonts(r){
   if (!document.fonts || !document.fonts.load) return;
-  const text = JSON.stringify([TYPES, WINGS, CENTERS, INST, r.name]) + "エニアグラム診断結果詳細あなたの基本タイプウイング各センターで最も高い本能の順盲点になりやすい成長ストレス方向余裕があるときの良さ追い詰められたときの癖9タイプスコアサブついて根っこにある願い恐れ強み陥りやすいパターンヒント下トライ※性格を決めつけるものではなく、自分を振り返るための目安です。僅差0123456789%・／（）「」→";
+  const text = JSON.stringify([TYPES, WINGS, CENTERS, INST, r.name, explainItems(r), decisionLines(r), PAIR_TEXT]) + "エニアグラム診断結果詳細あなたの基本タイプウイング各センターで最も高い本能の順盲点になりやすい成長ストレス方向余裕があるときの良さ追い詰められたときの癖9タイプスコアサブついて根っこにある願い恐れ強み陥りやすいパターンヒント下トライ※性格を決めつけるものではなく、自分を振り返るための目安です。僅差0123456789%・／（）「」→簡易版精密版仕上げ上位3タイプの比較合計比較点＝＋判定の確かさ高いふつう低め";
   const uniq = Array.from(new Set(Array.from(text))).join("");
   const jobs = [400, 500, 700].map(w => document.fonts.load(`${w} 30px "Noto Sans JP"`, uniq)).concat(document.fonts.load(`600 30px "Cormorant Garamond"`, "0123456789 ENAGRMSLFCHKw/%"));
   await Promise.race([Promise.all(jobs).catch(() => {}), new Promise(res => setTimeout(res, 5000))]);
@@ -759,7 +1025,7 @@ const inClaude = () => !!(window.claude && typeof window.claude.use === "functio
 const HOOK_RE = /^https:\/\/(?:(?:ptb|canary)\.)?(?:discord|discordapp)\.com\/api\/webhooks\/\d+\/[\w-]+\/?$/;
 const isTouch = () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
 function discordText(r){ const T = TYPES[r.main];
-  return `${r.name ? r.name + "の" : ""}エニアグラム診断結果：タイプ${r.main}（${T.name}）／ウイング ${r.wing}／トライタイプ ${r.tri.join("-")}／本能 ${r.instOrder.map(k => INST[k].name).join(">")}`; }
+  return `${r.name ? r.name + "の" : ""}エニアグラム診断結果${r.mode ? `（${MODES[r.mode].label}）` : ""}：タイプ${r.main}（${T.name}）／ウイング ${r.wing}／トライタイプ ${r.tri.join("-")}／本能 ${r.instOrder.map(k => INST[k].name).join(">")}`; }
 let sending = false;
 $("btnDiscord").onclick = async () => {
   if (!exportCache || sending) return;
